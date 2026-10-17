@@ -62,7 +62,7 @@ Cabeçalho (`<header class="site-header">`) é repetido em cada HTML: ao mudar, 
 
 ## Pendências / próximos passos
 - Rodar schema.sql no Supabase, criar conta, virar admin, testar com duas contas.
-- Push para o GitHub e deploy na Vercel (env vars `SUPABASE_URL`, `SUPABASE_ANON_KEY`).
+- Deploy na Vercel (env vars `SUPABASE_URL`, `SUPABASE_ANON_KEY`). Código já no GitHub, com CI.
 - Notificações (e-mail/push) de mensagem e de animal parecido; fotos no chat; denúncia de mensagens; paginação no servidor; PostGIS se crescer; similaridade de imagem.
 - Documento acadêmico: preencher 6.1 (tabelas RF/RNF estão no README), 6.2 (diagramas), 6.3 (tecnologias), 6.7 (arquitetura), 7.2 (link do repositório).
 
