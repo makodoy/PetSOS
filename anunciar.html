@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anunciar animal | PetSOS</title>
+  <meta name="description" content="Anuncie um animal perdido ou encontrado em Itapetininga.">
+  <meta name="theme-color" content="#F4F5F2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1E2421" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">PetSOS</a>
+      <nav class="nav" id="site-nav" aria-label="Principal">
+        <a href="/" data-nav>Animais</a>
+        <a href="/conversas" data-nav data-auth="in" hidden>Mensagens</a>
+        <a href="/meus" data-nav data-auth="in" hidden>Meus anúncios</a>
+        <a href="/admin" data-nav data-admin hidden>Moderação</a>
+        <a href="/entrar" data-nav data-auth="out">Entrar</a>
+        <button type="button" class="link-button" data-auth="in" data-action="signout" hidden>Sair</button>
+      </nav>
+      <a class="btn btn-primary btn-header" href="/anunciar">Anunciar<span class="btn-label-long">&nbsp;animal</span></a>
+      <button type="button" class="btn btn-secondary menu-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="page-narrow">
+      <div class="page-head">
+        <h1>Anunciar animal</h1>
+        <p>Quanto mais detalhes, melhor a comparação com os outros anúncios. Antes de aparecer para todos, um administrador revisa o anúncio.</p>
+      </div>
+
+      <div id="page-error"></div>
+
+      <section class="panel panel-pad empty" id="signin-required" hidden>
+        <h2>Entre para anunciar</h2>
+        <p class="muted">Pedimos uma conta para que só você possa editar ou encerrar o seu anúncio.</p>
+        <a class="btn btn-primary" href="/entrar?next=/anunciar">Entrar ou criar conta</a>
+      </section>
+
+      <form class="form panel panel-pad" id="report-form" novalidate hidden>
+        <section class="form-section">
+          <fieldset class="field">
+            <legend>O que aconteceu?</legend>
+            <div class="choices choices-large">
+              <label class="choice"><input type="radio" name="kind" value="lost" required> Perdi um animal</label>
+              <label class="choice"><input type="radio" name="kind" value="found"> Encontrei um animal</label>
+            </div>
+            <p class="field-error" id="kind-error"></p>
+          </fieldset>
+          <fieldset class="field" id="custody-field" hidden>
+            <legend>O animal está com você agora?</legend>
+            <div class="choices">
+              <label class="choice"><input type="radio" name="custody" value="with_finder"> Sim, está comigo</label>
+              <label class="choice"><input type="radio" name="custody" value="sighted"> Não, só vi o animal</label>
+            </div>
+            <p class="hint">Se está com você, a entrega ao tutor passa por revisão e confirmação dos dois lados.</p>
+            <p class="field-error" id="custody-error"></p>
+          </fieldset>
+        </section>
+
+        <section class="form-section">
+          <h2>Sobre o animal</h2>
+          <fieldset class="field">
+            <legend>Espécie</legend>
+            <div class="choices">
+              <label class="choice"><input type="radio" name="species" value="dog" required> Cão</label>
+              <label class="choice"><input type="radio" name="species" value="cat"> Gato</label>
+              <label class="choice"><input type="radio" name="species" value="other"> Outro</label>
+            </div>
+            <p class="field-error" id="species-error"></p>
+          </fieldset>
+
+          <div class="field" id="name-field" hidden>
+            <label for="pet_name">Nome do animal</label>
+            <input type="text" id="pet_name" name="pet_name" maxlength="60" autocomplete="off">
+          </div>
+
+          <div class="field-row">
+            <fieldset class="field">
+              <legend>Sexo</legend>
+              <div class="choices">
+                <label class="choice"><input type="radio" name="sex" value="male"> Macho</label>
+                <label class="choice"><input type="radio" name="sex" value="female"> Fêmea</label>
+                <label class="choice"><input type="radio" name="sex" value="unknown" checked> Não sei</label>
+              </div>
+            </fieldset>
+            <fieldset class="field">
+              <legend>Porte</legend>
+              <div class="choices">
+                <label class="choice"><input type="radio" name="size" value="small" required> Pequeno</label>
+                <label class="choice"><input type="radio" name="size" value="medium"> Médio</label>
+                <label class="choice"><input type="radio" name="size" value="large"> Grande</label>
+              </div>
+              <p class="field-error" id="size-error"></p>
+            </fieldset>
+          </div>
+
+          <fieldset class="field">
+            <legend>Cores da pelagem</legend>
+            <p class="hint">Escolha de 1 a 4.</p>
+            <div class="choices" id="color-choices"></div>
+            <p class="field-error" id="colors-error"></p>
+          </fieldset>
+
+          <div class="field">
+            <label for="breed">Raça (opcional)</label>
+            <input type="text" id="breed" name="breed" maxlength="60" autocomplete="off">
+            <p class="hint">Ex.: SRD, poodle, siamês.</p>
+          </div>
+
+          <div class="field">
+            <label for="description">Descrição (opcional)</label>
+            <textarea id="description" name="description" maxlength="1000"></textarea>
+            <p class="hint">Coleira, cicatrizes, comportamento, onde foi visto.</p>
+          </div>
+
+          <div class="field">
+            <label for="photo">Foto (opcional)</label>
+            <div class="photo-picker">
+              <div class="photo-preview" id="photo-preview"></div>
+              <div>
+                <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp">
+                <p class="hint">JPG, PNG ou WebP até 5 MB.</p>
+                <p class="field-error" id="photo-error"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Quando e onde</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="event_date" id="date-label">Data</label>
+              <input type="date" id="event_date" name="event_date" required>
+              <p class="field-error" id="event_date-error"></p>
+            </div>
+            <div class="field">
+              <label for="neighborhood">Bairro</label>
+              <input type="text" id="neighborhood" name="neighborhood" maxlength="80" required autocomplete="address-level3">
+              <p class="field-error" id="neighborhood-error"></p>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label" id="map-label"><strong>Local no mapa</strong></span>
+            <p class="hint" id="map-hint">Toque no mapa para marcar o ponto aproximado. Pelo teclado, mova o mapa com as setas e use "Marcar o centro do mapa". Para proteger seu endereço, o ponto é arredondado para cerca de 100 m.</p>
+            <div class="pick-map" id="pick-map" role="application" aria-labelledby="map-label" aria-describedby="map-hint"></div>
+            <div class="pick-map-tools">
+              <button type="button" class="btn btn-secondary" id="use-center">Marcar o centro do mapa</button>
+              <button type="button" class="btn btn-secondary" id="use-location">Usar minha localização</button>
+              <span class="muted small" id="location-status" aria-live="polite"></span>
+            </div>
+            <p class="field-error" id="location-error"></p>
+          </div>
+        </section>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="submit-btn">Enviar para aprovação</button>
+          <a class="btn btn-secondary" href="/">Cancelar</a>
+          <p class="field-error" id="form-error" role="alert"></p>
+        </div>
+      </form>
+    </div>
+  </main>
+  <script type="module" src="/assets/js/report-form.js"></script>
+</body>
+</html>

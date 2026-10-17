@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conversa | PetSOS</title>
+  <meta name="description" content="Conversa sobre um anúncio do PetSOS.">
+  <meta name="theme-color" content="#F4F5F2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1E2421" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">PetSOS</a>
+      <nav class="nav" id="site-nav" aria-label="Principal">
+        <a href="/" data-nav>Animais</a>
+        <a href="/conversas" data-nav data-auth="in" hidden>Mensagens</a>
+        <a href="/meus" data-nav data-auth="in" hidden>Meus anúncios</a>
+        <a href="/admin" data-nav data-admin hidden>Moderação</a>
+        <a href="/entrar" data-nav data-auth="out">Entrar</a>
+        <button type="button" class="link-button" data-auth="in" data-action="signout" hidden>Sair</button>
+      </nav>
+      <a class="btn btn-primary btn-header" href="/anunciar">Anunciar<span class="btn-label-long">&nbsp;animal</span></a>
+      <button type="button" class="btn btn-secondary menu-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <a class="back-link" href="/conversas">Voltar para mensagens</a>
+    <div id="page-error"></div>
+    <div class="chat-layout" id="chat-root" hidden>
+      <section class="panel chat" aria-labelledby="chat-title">
+        <div class="chat-head" id="chat-head"></div>
+        <ol class="chat-log" id="chat-log" aria-live="polite" aria-label="Mensagens"></ol>
+        <form class="chat-compose" id="compose" novalidate>
+          <label class="visually-hidden" for="message">Mensagem</label>
+          <textarea id="message" name="message" maxlength="1000" rows="2" required></textarea>
+          <button type="submit" class="btn btn-primary" id="send-btn">Enviar</button>
+          <p class="field-error" id="compose-error" role="alert"></p>
+        </form>
+      </section>
+      <aside class="panel panel-pad handover" id="handover" aria-labelledby="handover-title"></aside>
+    </div>
+  </main>
+  <script type="module" src="/assets/js/conversation.js"></script>
+</body>
+</html>

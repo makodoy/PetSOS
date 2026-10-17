@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar | PetSOS</title>
+  <meta name="description" content="Entre ou crie uma conta no PetSOS.">
+  <meta name="theme-color" content="#F4F5F2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1E2421" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">PetSOS</a>
+      <nav class="nav" id="site-nav" aria-label="Principal">
+        <a href="/" data-nav>Animais</a>
+        <a href="/conversas" data-nav data-auth="in" hidden>Mensagens</a>
+        <a href="/meus" data-nav data-auth="in" hidden>Meus anúncios</a>
+        <a href="/admin" data-nav data-admin hidden>Moderação</a>
+        <a href="/entrar" data-nav data-auth="out">Entrar</a>
+        <button type="button" class="link-button" data-auth="in" data-action="signout" hidden>Sair</button>
+      </nav>
+      <a class="btn btn-primary btn-header" href="/anunciar">Anunciar<span class="btn-label-long">&nbsp;animal</span></a>
+      <button type="button" class="btn btn-secondary menu-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="auth">
+      <div class="page-head">
+        <h1 id="auth-title">Entrar</h1>
+        <p id="auth-sub">Use seu e-mail e senha para anunciar e ver contatos.</p>
+      </div>
+      <div id="page-error"></div>
+      <form class="form panel panel-pad" id="auth-form" novalidate>
+        <div class="field" id="name-field" hidden>
+          <label for="display_name">Seu nome</label>
+          <input type="text" id="display_name" name="display_name" maxlength="60" autocomplete="name">
+          <p class="hint">Aparece para quem conversar com você.</p>
+          <p class="field-error" id="display_name-error"></p>
+        </div>
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input type="email" id="email" name="email" autocomplete="email" required>
+          <p class="field-error" id="email-error"></p>
+        </div>
+        <div class="field">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" minlength="8" required>
+          <p class="hint" id="password-hint" hidden>Pelo menos 8 caracteres.</p>
+          <p class="field-error" id="password-error"></p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="auth-submit">Entrar</button>
+        <p class="field-error" id="form-error" role="alert"></p>
+      </form>
+      <p class="auth-switch muted"><span id="switch-text">Ainda não tem conta?</span> <button type="button" class="link-button" id="switch-mode" style="color:var(--accent-text);font-weight:700;padding:0 4px">Criar conta</button></p>
+    </div>
+  </main>
+  <script type="module" src="/assets/js/auth.js"></script>
+</body>
+</html>

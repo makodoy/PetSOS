@@ -1,0 +1,40 @@
+@startuml PetSOS_Entrega
+title PetSOS - Diagrama de Atividades: anúncio, conversa e entrega
+
+|Anunciante|
+start
+:Envia anúncio (perdido ou encontrado);
+note right: encontrado: "está comigo" ou "só vi"
+|Administrador|
+if (Anúncio adequado?) then (sim)
+  :Aprova anúncio;
+else (não)
+  :Recusa com motivo;
+  stop
+endif
+|Interessado|
+:Abre o anúncio e envia mensagem;
+note right: em anúncio perdido: "vi o animal" ou "está comigo"
+if (Animal está com alguém?) then (não, só avistado)
+  :Trocam informações pelo chat;
+  stop
+else (sim)
+endif
+repeat
+  |Tutor|
+  :Descreve sinais que só o tutor saberia;
+  |Quem está com o animal|
+  :Envia a conversa para revisão (cópia congelada);
+  |Administrador|
+  :Lê a conversa;
+repeat while (Liberar entrega?) is (não, recusa com motivo)
+->sim;
+|Quem está com o animal|
+:Entrega o animal e confirma a entrega;
+|Tutor|
+:Confirma o recebimento;
+|Sistema|
+:confirm_handover: duas confirmações registradas;
+:Marca o anúncio como reencontrado;
+stop
+@enduml

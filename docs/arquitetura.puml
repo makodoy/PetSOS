@@ -1,0 +1,43 @@
+@startuml PetSOS_Arquitetura
+title PetSOS - Arquitetura de Alto Nível
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor "Tutor / Quem encontrou" as user
+actor "Administrador" as admin
+
+node "Navegador" {
+  component "Front-end\nHTML5 + CSS3 + JavaScript\n(Leaflet, supabase-js)" as fe
+}
+
+cloud "Vercel" {
+  component "Site estático (CDN)" as cdn
+  component "Python /api/matches\n(motor de correspondência)" as match
+  component "Python /api/config" as cfg
+}
+
+cloud "Supabase" {
+  component "Auth" as auth
+  database "PostgreSQL\nprofiles, reports, conversations,\nmessages, handovers\nRLS + gatilhos + funções" as db
+  component "Realtime\n(chat e entrega)" as rt
+  storage "Storage\npet-photos" as st
+}
+
+cloud "OpenStreetMap / CARTO" as tiles
+component "Similaridade de imagem\n(fase futura, plugável)" as img #line.dashed
+node "GitHub\nmakodoy/PetSOS" as gh
+
+user --> fe
+admin --> fe
+fe --> cdn : páginas e assets
+fe --> cfg : chaves públicas
+fe --> auth : login / cadastro
+fe --> db : anúncios, mensagens, rpc (entrega)
+fe <-- rt : novas mensagens e status
+fe --> st : fotos
+fe --> match : GET /api/matches?id= (token do usuário)
+match --> db : PostgREST com RLS
+match ..> img : ImageSimilarity
+fe --> tiles : mapa base
+gh --> cdn : deploy contínuo
+@enduml

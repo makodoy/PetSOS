@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PetSOS: animais perdidos e encontrados em Itapetininga</title>
+  <meta name="description" content="Anuncie e encontre animais perdidos e encontrados em Itapetininga e região.">
+  <meta name="theme-color" content="#F4F5F2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1E2421" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">PetSOS</a>
+      <nav class="nav" id="site-nav" aria-label="Principal">
+        <a href="/" data-nav>Animais</a>
+        <a href="/conversas" data-nav data-auth="in" hidden>Mensagens</a>
+        <a href="/meus" data-nav data-auth="in" hidden>Meus anúncios</a>
+        <a href="/admin" data-nav data-admin hidden>Moderação</a>
+        <a href="/entrar" data-nav data-auth="out">Entrar</a>
+        <button type="button" class="link-button" data-auth="in" data-action="signout" hidden>Sair</button>
+      </nav>
+      <a class="btn btn-primary btn-header" href="/anunciar">Anunciar<span class="btn-label-long">&nbsp;animal</span></a>
+      <button type="button" class="btn btn-secondary menu-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="intro">
+      <h1>Perdeu ou encontrou um animal em Itapetininga?</h1>
+      <p>Anuncie em poucos minutos. Comparamos cada anúncio com os do tipo oposto e mostramos os animais mais parecidos perto de você.</p>
+    </section>
+
+    <div id="page-error"></div>
+
+    <form class="filters" id="filters" aria-label="Filtrar anúncios">
+      <div class="filter filter-kind">
+        <span id="kind-label">Tipo</span>
+        <div class="segmented" role="group" aria-labelledby="kind-label">
+          <button type="button" data-kind="all" aria-pressed="true">Todos</button>
+          <button type="button" data-kind="lost" aria-pressed="false">Perdidos</button>
+          <button type="button" data-kind="found" aria-pressed="false">Encontrados</button>
+        </div>
+      </div>
+      <label class="filter"><span>Espécie</span>
+        <select name="species">
+          <option value="">Todas</option>
+          <option value="dog">Cão</option>
+          <option value="cat">Gato</option>
+          <option value="other">Outro animal</option>
+        </select>
+      </label>
+      <label class="filter"><span>Porte</span>
+        <select name="size">
+          <option value="">Todos</option>
+          <option value="small">Pequeno</option>
+          <option value="medium">Médio</option>
+          <option value="large">Grande</option>
+        </select>
+      </label>
+      <label class="filter"><span>Cor</span>
+        <select name="color" id="color-filter"><option value="">Todas</option></select>
+      </label>
+      <p class="filters-meta muted small" id="result-count" aria-live="polite"></p>
+    </form>
+
+    <div class="browse">
+      <section class="panel" aria-label="Anúncios abertos">
+        <ul class="report-list" id="report-list">
+          <li class="skeleton-row" aria-hidden="true"><span></span><span></span></li>
+          <li class="skeleton-row" aria-hidden="true"><span></span><span></span></li>
+          <li class="skeleton-row" aria-hidden="true"><span></span><span></span></li>
+          <li class="skeleton-row" aria-hidden="true"><span></span><span></span></li>
+        </ul>
+      </section>
+      <div class="map-pane panel"><div id="map" class="map" role="region" aria-label="Mapa dos anúncios"></div></div>
+    </div>
+  </main>
+  <script type="module" src="/assets/js/home.js"></script>
+</body>
+</html>
