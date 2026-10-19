@@ -31,6 +31,9 @@ Só existe entrega quando o animal **está com alguém**. Avistamentos servem pa
 3. Admin libera a entrega ou recusa com motivo (pode ser reenviada).
 4. Quem está com o animal confirma que entregou; o tutor confirma que recebeu.
 5. Com as duas confirmações, o anúncio vira `reencontrado`. Ninguém consegue marcar isso de outro jeito.
+6. Se a outra pessoa também anunciou o mesmo animal (o "perdido" do tutor ou o "encontrado" de quem estava com ele), esse anúncio par vira `reencontrado` junto. O par é o único anúncio aberto dela com tipo oposto e mesma espécie; com dois ou mais candidatos, nada é fechado automaticamente.
+
+Anúncios reencontrados ficam na página inicial por 30 dias, com o selo "Finalizado!", e depois saem da lista.
 
 Diagramas: `docs/arquitetura.puml` (6.7) e `docs/entrega-atividades.puml` (6.2.3).
 
@@ -95,7 +98,7 @@ Regras do banco (RLS, gatilhos, entrega): `supabase/tests/run.sh` num PostgreSQL
 
 ### 1. Supabase
 1. Crie um projeto em https://supabase.com.
-2. Em **SQL Editor**, rode `supabase/schema.sql` e, se quiser dados de exemplo, `supabase/seed.sql`. (Rodou a versão anterior? Execute primeiro o bloco RESET no fim do `schema.sql`.)
+2. Em **SQL Editor**, rode `supabase/schema.sql` e, se quiser dados de exemplo, `supabase/seed.sql`. (Rodou a versão anterior? Execute primeiro o bloco RESET no fim do `schema.sql`.) Banco criado antes de uma mudança no schema: rode, em ordem, os arquivos de `supabase/updates/` com data posterior à criação.
 3. Em **Authentication > Providers > Email**, deixe o e-mail habilitado. Para demonstrações, desligue *Confirm email*.
 4. Em **Authentication > URL Configuration**, coloque a URL da Vercel em *Site URL* e `http://localhost:3000` em *Redirect URLs*.
 5. Crie sua conta no site e torne-se administrador no SQL Editor:
@@ -129,6 +132,7 @@ assets/css/styles.css                                               tokens e com
 assets/js/                                                          um módulo por página + supabase.js, ui.js, map.js
 api/config.py  api/matches.py  api/_matching.py                     funções Python
 supabase/schema.sql  supabase/seed.sql                              banco, RLS, funções, storage, exemplos
+supabase/updates/                                                   atualizações para bancos já criados
 docs/arquitetura.puml  docs/entrega-atividades.puml                 diagramas
 tests/test_matching.py                                              testes do motor
 supabase/tests/                                                     testes das regras do banco
