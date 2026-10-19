@@ -33,26 +33,25 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #161B19;
-    --surface: #1E2421;
-    --sunken: #262D2A;
-    --ink: #E5EAE7;
-    --ink-muted: #A0AAA5;
-    --border: rgba(229, 234, 231, 0.10);
-    --border-strong: rgba(229, 234, 231, 0.24);
-    --accent: #3D5FD6;
-    --accent-hover: #5072E6;
-    --accent-text: #9DB0FF;
-    --accent-wash: rgba(157, 176, 255, 0.10);
-    --lost: #F08A76;
-    --found: #7CC79A;
-    --danger: #F08A76;
-    --shadow-soft: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    --scrim: rgba(0, 0, 0, 0.6);
-    color-scheme: dark;
-  }
+/* Tema claro é o padrão; o botão do cabeçalho alterna para o escuro (<html data-theme="dark">, salvo no navegador). */
+:root[data-theme="dark"] {
+  --canvas: #161B19;
+  --surface: #1E2421;
+  --sunken: #262D2A;
+  --ink: #E5EAE7;
+  --ink-muted: #A0AAA5;
+  --border: rgba(229, 234, 231, 0.10);
+  --border-strong: rgba(229, 234, 231, 0.24);
+  --accent: #3D5FD6;
+  --accent-hover: #5072E6;
+  --accent-text: #9DB0FF;
+  --accent-wash: rgba(157, 176, 255, 0.10);
+  --lost: #F08A76;
+  --found: #7CC79A;
+  --danger: #F08A76;
+  --shadow-soft: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --scrim: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
 }
 
 /* ---------- Base ---------- */
@@ -104,9 +103,18 @@ p { margin: 0; }
 .nav a:hover, .link-button:hover { color: var(--ink); background: var(--sunken); }
 .nav a[aria-current="page"] { color: var(--ink); font-weight: 700; }
 .btn.menu-toggle { display: none; }
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 44px; height: 44px; padding: 0; border: 1px solid var(--border-strong); border-radius: var(--radius-m);
+  background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--ink-muted); }
+.theme-toggle svg { width: 20px; height: 20px; }
+.theme-toggle .icon-sun, [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 @media (max-width: 760px) {
   .header-inner { gap: var(--s2); }
-  .btn-header { margin-left: auto; }
+  .theme-toggle { margin-left: auto; }
   .btn.menu-toggle { display: inline-flex; padding: 10px var(--s3); }
   .nav {
     display: none; position: absolute; top: var(--header-h); left: 0; right: 0; margin: 0;
@@ -320,11 +328,10 @@ dialog h2 { font-size: 24px; margin-bottom: var(--s2); }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-soft); border: 1px solid var(--border); }
 .leaflet-popup-content a { font-weight: 700; }
 .leaflet-control-attribution { font-size: 11px; }
-@media (prefers-color-scheme: dark) {
-  .leaflet-control-attribution { background: rgba(30, 36, 33, 0.85) !important; color: var(--ink-muted); }
-  .leaflet-control-attribution a { color: var(--accent-text); }
-  .leaflet-bar a { background: var(--surface); color: var(--ink); border-color: var(--border); }
-}
+[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6); }
+[data-theme="dark"] .leaflet-control-attribution { background: rgba(30, 36, 33, 0.85) !important; color: var(--ink-muted); }
+[data-theme="dark"] .leaflet-control-attribution a { color: var(--accent-text); }
+[data-theme="dark"] .leaflet-bar a { background: var(--surface); color: var(--ink); border-color: var(--border); }
 
 /* ---------- Conversa ---------- */
 .chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s5); align-items: start; padding-bottom: var(--s7); }

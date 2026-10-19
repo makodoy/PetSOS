@@ -119,7 +119,33 @@ export function confirmDialog({ title, body, confirmLabel, danger = false, reaso
   });
 }
 
+const THEME_KEY = "petsos:theme";
+const THEME_COLOR = { light: "#F4F5F2", dark: "#161B19" };
+
+// O <head> de cada página já aplica o tema salvo antes de desenhar (evita piscar); aqui só o botão.
+function initThemeToggle() {
+  const button = document.querySelector(".theme-toggle");
+  if (!button) return;
+  const sync = () => {
+    const dark = document.documentElement.dataset.theme === "dark";
+    const label = dark ? "Usar tema claro" : "Usar tema escuro";
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR[dark ? "dark" : "light"]);
+  };
+  button.addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    if (next === "dark") document.documentElement.dataset.theme = "dark";
+    else delete document.documentElement.dataset.theme;
+    try { localStorage.setItem(THEME_KEY, next); } catch { /* navegação privada: vale só nesta página */ }
+    sync();
+    window.dispatchEvent(new Event("petsos:themechange"));
+  });
+  sync();
+}
+
 export async function initHeader() {
+  initThemeToggle();
   const path = location.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
   document.querySelectorAll("[data-nav]").forEach((a) => {
     if (a.getAttribute("href") === path) a.setAttribute("aria-current", "page");

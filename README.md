@@ -2,7 +2,7 @@
 
 Protótipo do sistema web inteligente para correspondência de animais perdidos e encontrados em Itapetininga e região (Engenharia de Software III, Fatec Itapetininga).
 
-- **Front-end:** HTML5, CSS3 e JavaScript puro (módulos ES), mapa com Leaflet + OpenStreetMap/CARTO
+- **Front-end:** HTML5, CSS3 e JavaScript puro (módulos ES), mapa com Leaflet + OpenStreetMap
 - **Back-end:** funções serverless em Python na Vercel (`/api`) + regras de negócio no PostgreSQL (RLS, gatilhos e funções)
 - **Banco, autenticação, tempo real e fotos:** Supabase (PostgreSQL + Auth + Realtime + Storage)
 - **Versionamento e deploy:** GitHub → Vercel (deploy contínuo a cada push)

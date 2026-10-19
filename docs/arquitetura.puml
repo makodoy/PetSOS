@@ -23,7 +23,7 @@ cloud "Supabase" {
   storage "Storage\npet-photos" as st
 }
 
-cloud "OpenStreetMap / CARTO" as tiles
+cloud "OpenStreetMap" as tiles
 component "Similaridade de imagem\n(fase futura, plugável)" as img #line.dashed
 node "GitHub\nmakodoy/PetSOS" as gh
 
