@@ -180,7 +180,19 @@ begin
   perform t.ok((public.review_handover(v_h, true)).status = 'approved', 'admin libera a entrega');
 end $$;
 
+-- Bob também anunciou o cão como encontrado (o par) e um gato, que não tem nada a ver com esta entrega.
 call t.as_user('authenticated', '00000000-0000-0000-0000-000000000002');
+do $$
+declare v_id uuid;
+begin
+  insert into public.reports (kind, custody, species, colors, neighborhood, lat, lng, event_date)
+  values ('found', 'with_finder', 'dog', '{caramelo}', 'Centro', -23.588, -48.042, current_date) returning id into v_id;
+  insert into t.ids values ('found_bob_dog', v_id);
+  insert into public.reports (kind, custody, species, colors, neighborhood, lat, lng, event_date)
+  values ('found', 'with_finder', 'cat', '{preto}', 'Centro', -23.588, -48.042, current_date) returning id into v_id;
+  insert into t.ids values ('found_bob_cat', v_id);
+end $$;
+
 select t.ok((public.confirm_handover((select id from t.ids where name = 'h_bob'))).finder_confirmed_at is not null,
             'quem está com o animal confirma a entrega');
 call t.as_user('authenticated', '00000000-0000-0000-0000-000000000001');
@@ -188,6 +200,13 @@ select t.ok((public.confirm_handover((select id from t.ids where name = 'h_bob')
             'tutora confirma o recebimento e a entrega é concluída');
 select t.ok((select status from public.reports where id = (select id from t.ids where name = 'lost1')) = 'reunited',
             'anúncio vira reencontrado só com as duas confirmações');
+call t.as_user('authenticated', '00000000-0000-0000-0000-00000000000a'); -- o par do Bob ainda está pendente
+select t.ok((select status from public.reports where id = (select id from t.ids where name = 'found_bob_dog')) = 'reunited'
+            and (select linked_report_id from public.handovers where id = (select id from t.ids where name = 'h_bob'))
+                = (select id from t.ids where name = 'found_bob_dog'),
+            'anúncio par de quem estava com o animal também vira reencontrado');
+select t.ok((select status from public.reports where id = (select id from t.ids where name = 'found_bob_cat')) = 'open',
+            'anúncio de outra espécie não é fechado junto');
 
 call t.as_user('authenticated', '00000000-0000-0000-0000-000000000003');
 do $$ begin

@@ -1,7 +1,7 @@
 import { getClient, getProfile, REPORT_FIELDS, PHOTO_BUCKET } from "./supabase.js";
 import { COLOR_LABEL, SPECIES_LABEL, SIZE_LABEL, SEX_LABEL, CUSTODY_LABEL } from "./constants.js";
 import {
-  initHeader, escapeHtml, reportTitle, formatDate, relativeDate, statusHtml, thumbHtml, photoUrl, pawIcon,
+  initHeader, escapeHtml, reportTitle, formatDate, relativeDate, statusHtml, thumbHtml, photoUrl, pawIcon, reunitedSealHtml, reunitedMessage,
   showError, toast, confirmDialog, errorText, CONNECTION_ERROR,
 } from "./ui.js";
 import { createMap, markerStyle } from "./map.js";
@@ -40,7 +40,10 @@ function noticesHtml() {
   if (report.review_status === "rejected" && (isOwner() || isAdmin())) {
     out.push(`<p class="notice notice-danger">Anúncio recusado${report.review_note ? `: ${escapeHtml(report.review_note)}` : "."} Exclua e anuncie de novo com as correções.</p>`);
   }
-  if (report.status === "reunited") out.push(`<p class="notice">Este animal foi reencontrado. A entrega foi confirmada pelas duas pessoas.</p>`);
+  if (report.status === "reunited") {
+    out.push(`<div class="notice notice-reunited">${reunitedSealHtml()}<div><p class="reunited-message">${reunitedMessage(report)}</p>
+      <p>A entrega foi confirmada pelas duas pessoas. Este anúncio fica só como registro.</p></div></div>`);
+  }
   if (report.status === "closed") out.push(`<p class="notice notice-pending">Anúncio encerrado por quem anunciou.</p>`);
   return out.join("");
 }

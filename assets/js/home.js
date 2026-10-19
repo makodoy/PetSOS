@@ -1,6 +1,6 @@
 import { getClient, REPORT_FIELDS } from "./supabase.js";
 import { COLORS, COLOR_LABEL, SPECIES_LABEL } from "./constants.js";
-import { initHeader, escapeHtml, reportTitle, relativeDate, statusHtml, thumbHtml, showError, CONNECTION_ERROR } from "./ui.js";
+import { initHeader, escapeHtml, reportTitle, relativeDate, statusHtml, thumbHtml, reunitedSealHtml, reunitedMessage, showError, CONNECTION_ERROR } from "./ui.js";
 import { createMap, markerStyle } from "./map.js";
 
 const listEl = document.getElementById("report-list");
@@ -50,20 +50,25 @@ function visibleReports() {
 
 function rowHtml(r) {
   const meta = [SPECIES_LABEL[r.species], r.colors.map((c) => COLOR_LABEL[c] ?? c).join(" e ")].filter(Boolean).join(", ");
-  return `<li><a class="report-row" href="/anuncio?id=${r.id}" data-id="${r.id}">
+  const reunited = r.status === "reunited";
+  return `<li><a class="report-row${reunited ? " is-reunited" : ""}" href="/anuncio?id=${r.id}" data-id="${r.id}">
     ${thumbHtml(state.sb, r)}
     <div class="row-body">
       ${statusHtml(r)}
       <h3>${escapeHtml(reportTitle(r))}</h3>
-      <p class="row-meta">${escapeHtml(meta)}</p>
+      ${reunited ? `<p class="reunited-message">${reunitedMessage(r)}</p>` : `<p class="row-meta">${escapeHtml(meta)}</p>`}
       <p class="row-meta">${escapeHtml(r.neighborhood)}, ${relativeDate(r.event_date)}</p>
     </div>
+    ${reunited ? reunitedSealHtml() : ""}
   </a></li>`;
 }
 
 function render() {
   const items = visibleReports();
-  countEl.textContent = `${items.length} ${items.length === 1 ? "anúncio aberto" : "anúncios abertos"}`;
+  const open = items.filter((r) => r.status === "open").length;
+  const reunited = items.length - open;
+  countEl.textContent = `${open} ${open === 1 ? "anúncio aberto" : "anúncios abertos"}`
+    + (reunited ? `, ${reunited} ${reunited === 1 ? "reencontrado" : "reencontrados"} no último mês` : "");
 
   if (!items.length) {
     listEl.innerHTML = hasFilters()
@@ -141,15 +146,17 @@ async function main() {
   state.map = createMap(document.getElementById("map"));
   try {
     state.sb = await getClient();
+    // Abertos primeiro; depois os reencontrados do último mês, com selo, para ninguém achar que ainda esperam o dono.
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
     const { data, error } = await state.sb
       .from("reports")
       .select(REPORT_FIELDS)
-      .eq("status", "open")
+      .or(`status.eq.open,and(status.eq.reunited,updated_at.gte.${since})`)
       .eq("review_status", "approved")
       .order("created_at", { ascending: false })
       .limit(300);
     if (error) throw error;
-    state.reports = data;
+    state.reports = [...data.filter((r) => r.status === "open"), ...data.filter((r) => r.status !== "open")];
   } catch {
     listEl.innerHTML = "";
     showError(document.getElementById("page-error"), CONNECTION_ERROR);

@@ -34,9 +34,18 @@ export function formatDate(isoDate) {
 }
 
 export function statusHtml(r) {
-  if (r.status === "reunited") return `<span class="status status-closed">Reencontrado</span>`;
+  if (r.status === "reunited") return `<span class="status status-found">Reencontrado</span>`;
   if (r.status === "closed") return `<span class="status status-closed">Encerrado</span>`;
   return `<span class="status status-${r.kind}">${KIND_LABEL[r.kind]}</span>`;
+}
+
+// Selo e frase dos anúncios concluídos pela entrega com dupla confirmação.
+export function reunitedSealHtml() {
+  return `<span class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Finalizado!</span>`;
+}
+
+export function reunitedMessage(r) {
+  return r.kind === "found" ? "Dono encontrado e pet seguro!" : "Pet encontrado e de volta para casa!";
 }
 
 export function photoUrl(sb, path) {
