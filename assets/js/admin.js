@@ -174,7 +174,7 @@ async function main() {
     sb.from("reports").select(`${REPORT_FIELDS}, owner:profiles!reports_user_id_fkey(display_name)`)
       .eq("review_status", "pending").order("created_at"),
     sb.from("handovers").select(`id, status, transcript, conversation_id, updated_at,
-        report:reports(id, kind, species, custody, pet_name, photo_path, description),
+        report:reports!handovers_report_id_fkey(id, kind, species, custody, pet_name, photo_path, description),
         finder:profiles!handovers_finder_id_fkey(display_name),
         claimant:profiles!handovers_claimant_id_fkey(display_name)`)
       .eq("status", "under_review").order("updated_at"),
