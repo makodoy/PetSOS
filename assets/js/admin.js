@@ -163,8 +163,8 @@ async function main() {
   try {
     sb = await getClient();
     me = await getProfile();
-  } catch {
-    return showError(document.getElementById("page-error"), CONNECTION_ERROR);
+  } catch (err) {
+    return showError(document.getElementById("page-error"), CONNECTION_ERROR, err);
   }
   if (!me) return location.replace("/entrar?next=/admin");
   if (me.role !== "admin") {
@@ -179,7 +179,7 @@ async function main() {
         claimant:profiles!handovers_claimant_id_fkey(display_name)`)
       .eq("status", "under_review").order("updated_at"),
   ]);
-  if (r.error || h.error) return showError(document.getElementById("page-error"), CONNECTION_ERROR);
+  if (r.error || h.error) return showError(document.getElementById("page-error"), CONNECTION_ERROR, r.error || h.error);
   reports = r.data;
   handovers = h.data;
   root.hidden = false;

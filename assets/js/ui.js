@@ -72,8 +72,24 @@ export function toast(message) {
   toast.timer = setTimeout(() => (region.innerHTML = ""), 4000);
 }
 
-export function showError(container, message) {
-  container.innerHTML = `<div class="banner-error" role="alert">${escapeHtml(message)}</div>`;
+// Erro de página: texto sem jargão + saída (tentar de novo). Detalhes técnicos só no botão de copiar.
+export function showError(container, message, error = null) {
+  const details = error ? String(error.message || error) : "";
+  const retry = Boolean(error) || message === CONNECTION_ERROR;
+  container.innerHTML = `<div class="banner-error" role="alert"><p>${escapeHtml(message)}</p>
+    ${retry ? `<div class="banner-actions">
+      <button type="button" class="btn btn-secondary" data-error-retry>Tentar de novo</button>
+      ${details ? `<button type="button" class="btn btn-secondary" data-error-copy>Copiar detalhes do erro</button>` : ""}
+    </div>` : ""}</div>`;
+  container.querySelector("[data-error-retry]")?.addEventListener("click", () => location.reload());
+  container.querySelector("[data-error-copy]")?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(`${details}\n${location.href}`);
+      toast("Detalhes copiados.");
+    } catch {
+      toast("Não foi possível copiar. Selecione o texto da mensagem e copie manualmente.");
+    }
+  });
 }
 
 export function safeNext(value, fallback = "/") {
@@ -93,6 +109,7 @@ export function errorText(error, fallback = "Não foi possível concluir agora. 
 // Diálogo de confirmação reutilizável. Retorna true/false (e o texto, quando há campo de motivo).
 export function confirmDialog({ title, body, confirmLabel, danger = false, reasonLabel = null, reasonRequired = false }) {
   return new Promise((resolve) => {
+    const opener = document.activeElement;
     const dialog = document.createElement("dialog");
     dialog.setAttribute("aria-labelledby", "confirm-title");
     dialog.innerHTML = `<form method="dialog" novalidate>
@@ -101,7 +118,7 @@ export function confirmDialog({ title, body, confirmLabel, danger = false, reaso
       ${reasonLabel ? `<div class="field" style="margin-top:var(--s4)"><label for="confirm-reason">${escapeHtml(reasonLabel)}</label>
         <textarea id="confirm-reason" maxlength="500"></textarea><p class="field-error" id="confirm-reason-error"></p></div>` : ""}
       <div class="dialog-actions">
-        <button class="btn btn-secondary" value="cancel" type="submit">Voltar</button>
+        <button class="btn btn-secondary" value="cancel" type="submit"${danger ? " autofocus" : ""}>Voltar</button>
         <button class="btn ${danger ? "btn-danger-solid" : "btn-primary"}" value="confirm" type="submit">${escapeHtml(confirmLabel)}</button>
       </div></form>`;
     document.body.append(dialog);
@@ -122,6 +139,7 @@ export function confirmDialog({ title, body, confirmLabel, danger = false, reaso
       const ok = dialog.returnValue === "confirm";
       const text = reason?.value.trim() ?? "";
       dialog.remove();
+      if (opener?.isConnected) opener.focus();
       resolve(reasonLabel ? { ok, reason: text } : ok);
     });
     dialog.showModal();
@@ -135,11 +153,16 @@ const THEME_COLOR = { light: "#F4F5F2", dark: "#161B19" };
 function initThemeToggle() {
   const button = document.querySelector(".theme-toggle");
   if (!button) return;
+  // Tooltip real (hover e foco); o nome acessível continua no aria-label.
+  const tip = document.createElement("span");
+  tip.className = "tooltip";
+  tip.setAttribute("aria-hidden", "true");
+  button.append(tip);
   const sync = () => {
     const dark = document.documentElement.dataset.theme === "dark";
     const label = dark ? "Usar tema claro" : "Usar tema escuro";
     button.setAttribute("aria-label", label);
-    button.title = label;
+    tip.textContent = label;
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR[dark ? "dark" : "light"]);
   };
   button.addEventListener("click", () => {
@@ -153,8 +176,22 @@ function initThemeToggle() {
   sync();
 }
 
+// Rodapé comum, montado aqui para não repetir em cada HTML.
+function initFooter() {
+  if (document.querySelector(".site-footer")) return;
+  const footer = document.createElement("footer");
+  footer.className = "site-footer";
+  footer.innerHTML = `<div class="wrap footer-inner">
+    <p class="footer-brand">PetSOS</p>
+    <p>Protótipo acadêmico da Fatec Itapetininga para reunir animais perdidos e encontrados em Itapetininga e região.</p>
+    <p>O contato acontece só pelo chat do site, e o local publicado é aproximado, com cerca de 100 m de margem.</p>
+  </div>`;
+  document.body.append(footer);
+}
+
 export async function initHeader() {
   initThemeToggle();
+  initFooter();
   const path = location.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
   document.querySelectorAll("[data-nav]").forEach((a) => {
     if (a.getAttribute("href") === path) a.setAttribute("aria-current", "page");
@@ -195,5 +232,6 @@ export async function initHeader() {
   }
 }
 
+// Texto para quem usa o site; a causa técnica (ex.: variáveis da Vercel) vai em "Copiar detalhes do erro".
 export const CONNECTION_ERROR =
-  "Não foi possível conectar ao banco de dados. Recarregue a página; se continuar, confira as variáveis SUPABASE_URL e SUPABASE_ANON_KEY na Vercel.";
+  "Não foi possível carregar os dados agora. Seus anúncios e mensagens continuam salvos; verifique a conexão e tente de novo.";

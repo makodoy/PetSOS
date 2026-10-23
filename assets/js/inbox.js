@@ -31,9 +31,9 @@ async function main() {
   try {
     sb = await getClient();
     me = await getProfile();
-  } catch {
+  } catch (err) {
     list.innerHTML = "";
-    return showError(document.getElementById("page-error"), CONNECTION_ERROR);
+    return showError(document.getElementById("page-error"), CONNECTION_ERROR, err);
   }
   if (!me) return location.replace("/entrar?next=/conversas");
 
@@ -44,7 +44,7 @@ async function main() {
   const { data, error } = await query;
   if (error) {
     list.innerHTML = "";
-    return showError(document.getElementById("page-error"), CONNECTION_ERROR);
+    return showError(document.getElementById("page-error"), CONNECTION_ERROR, error);
   }
   if (reportFilter) {
     document.getElementById("inbox-sub").innerHTML = `Conversas sobre um anúncio seu. <a href="/conversas">Ver todas</a>`;

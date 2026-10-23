@@ -58,7 +58,10 @@ function renderHandover() {
   }
 
   const reviewState = !h || h.status === "under_review" || h.status === "rejected" ? "current" : "done";
-  const reviewDetail = !h ? "Ainda não enviada" : h.status === "under_review" ? "Em análise" : h.status === "rejected" ? "Recusada" : "Aprovada";
+  // Cada etapa mostra quando aconteceu (enquanto em análise, updated_at é o horário do envio).
+  const reviewDetail = !h ? "Ainda não enviada"
+    : h.status === "under_review" ? `Enviada em ${formatDateTime(h.updated_at)}; em análise`
+    : `${h.status === "rejected" ? "Recusada" : "Aprovada"}${h.reviewed_at ? ` em ${formatDateTime(h.reviewed_at)}` : ""}`;
   const finderState = h?.finder_confirmed_at ? "done" : h?.status === "approved" ? "current" : "todo";
   const claimantState = h?.claimant_confirmed_at ? "done" : h?.status === "approved" ? "current" : "todo";
   html += `<ol class="steps">
@@ -137,14 +140,19 @@ compose.addEventListener("submit", async (e) => {
   const err = document.getElementById("compose-error");
   if (!text) {
     err.textContent = "Escreva a mensagem antes de enviar.";
+    compose.message.focus();
     return;
   }
   const btn = document.getElementById("send-btn");
+  btn.setAttribute("aria-busy", "true");
   btn.disabled = true;
+  btn.textContent = "Enviando…";
   const { data, error } = await sb.from("messages").insert({ conversation_id: conv.id, sender_id: me.id, body: text }).select().single();
+  btn.removeAttribute("aria-busy");
   btn.disabled = false;
+  btn.textContent = "Enviar";
   if (error) {
-    err.textContent = "A mensagem não foi enviada. Verifique a conexão e tente de novo.";
+    err.textContent = "A mensagem não foi enviada, mas o texto continua no campo. Verifique a conexão e tente de novo.";
     return;
   }
   err.textContent = "";
@@ -165,14 +173,14 @@ async function main() {
   try {
     sb = await getClient();
     me = await getProfile();
-  } catch {
-    return showError(document.getElementById("page-error"), CONNECTION_ERROR);
+  } catch (err) {
+    return showError(document.getElementById("page-error"), CONNECTION_ERROR, err);
   }
   if (!me) return location.replace(`/entrar?next=${encodeURIComponent(location.pathname + location.search)}`);
 
   const { data, error } = await sb.from("conversations").select(CONVERSATION_SELECT).eq("id", id).maybeSingle();
   if (error || !data || !data.report) {
-    return showError(document.getElementById("page-error"), error ? CONNECTION_ERROR : "Esta conversa não existe ou você não participa dela.");
+    return showError(document.getElementById("page-error"), error ? CONNECTION_ERROR : "Esta conversa não existe ou você não participa dela.", error);
   }
   conv = data;
   report = data.report;
@@ -184,7 +192,7 @@ async function main() {
 
   document.getElementById("chat-root").hidden = false;
   renderHead();
-  if (!msgs?.length) log.innerHTML = `<li class="chat-empty muted">Nenhuma mensagem ainda.</li>`;
+  if (!msgs?.length) log.innerHTML = `<li class="chat-empty muted">Nenhuma mensagem ainda.${participant() ? " Escreva no campo abaixo para começar a conversa." : ""}</li>`;
   (msgs || []).forEach(appendMessage);
   compose.hidden = !participant();
   renderHandover();
