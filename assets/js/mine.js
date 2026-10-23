@@ -10,9 +10,9 @@ async function main() {
   try {
     sb = await getClient();
     session = (await sb.auth.getSession()).data.session;
-  } catch {
+  } catch (err) {
     list.innerHTML = "";
-    showError(document.getElementById("page-error"), CONNECTION_ERROR);
+    showError(document.getElementById("page-error"), CONNECTION_ERROR, err);
     return;
   }
   if (!session) {
@@ -22,7 +22,7 @@ async function main() {
   const { data, error } = await sb.from("reports").select(REPORT_FIELDS).eq("user_id", session.user.id).order("created_at", { ascending: false });
   if (error) {
     list.innerHTML = "";
-    showError(document.getElementById("page-error"), CONNECTION_ERROR);
+    showError(document.getElementById("page-error"), CONNECTION_ERROR, error);
     return;
   }
   if (!data.length) {

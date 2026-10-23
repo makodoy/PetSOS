@@ -15,9 +15,15 @@ const rules = {
 function validate(name) {
   const msg = rules[name]();
   document.getElementById(`${name}-error`).textContent = msg;
-  form[name].toggleAttribute("aria-invalid", Boolean(msg));
   if (msg) form[name].setAttribute("aria-invalid", "true");
+  else form[name].removeAttribute("aria-invalid");
   return !msg;
+}
+
+// Erro some na primeira tecla de correção; a regra roda de novo no próximo blur.
+function clearError(name) {
+  document.getElementById(`${name}-error`).textContent = "";
+  form[name].removeAttribute("aria-invalid");
 }
 
 function setMode(m) {
@@ -25,8 +31,8 @@ function setMode(m) {
   const signup = m === "signup";
   document.getElementById("auth-title").textContent = signup ? "Criar conta" : "Entrar";
   document.getElementById("auth-sub").textContent = signup
-    ? "Com uma conta você anuncia, edita seus anúncios e vê contatos."
-    : "Use seu e-mail e senha para anunciar e ver contatos.";
+    ? "Com uma conta você anuncia, conversa pelo chat e acompanha seus anúncios."
+    : "Use seu e-mail e senha para anunciar e enviar mensagens.";
   document.getElementById("auth-submit").textContent = signup ? "Criar conta" : "Entrar";
   document.getElementById("switch-text").textContent = signup ? "Já tem conta?" : "Ainda não tem conta?";
   document.getElementById("switch-mode").textContent = signup ? "Entrar" : "Criar conta";
@@ -51,8 +57,8 @@ async function main() {
   try {
     sb = await getClient();
     if ((await sb.auth.getSession()).data.session) location.replace(next);
-  } catch {
-    showError(document.getElementById("page-error"), CONNECTION_ERROR);
+  } catch (err) {
+    showError(document.getElementById("page-error"), CONNECTION_ERROR, err);
     return;
   }
 
@@ -63,7 +69,8 @@ async function main() {
     validate(e.target.name);
   });
   form.addEventListener("input", (e) => {
-    if (touched.has(e.target.name)) validate(e.target.name);
+    if (rules[e.target.name]) clearError(e.target.name);
+    document.getElementById("form-error").textContent = "";
   });
 
   form.addEventListener("submit", async (e) => {
@@ -72,13 +79,18 @@ async function main() {
     if (![validate("display_name"), validate("email"), validate("password")].every(Boolean)) return;
     const btn = document.getElementById("auth-submit");
     const formError = document.getElementById("form-error");
+    const label = btn.textContent;
+    btn.setAttribute("aria-busy", "true");
     btn.disabled = true;
+    btn.textContent = mode === "signup" ? "Criando conta…" : "Entrando…";
     formError.textContent = "";
     const credentials = { email: form.email.value.trim(), password: form.password.value };
     const { data, error } = mode === "signup"
       ? await sb.auth.signUp({ ...credentials, options: { emailRedirectTo: `${location.origin}${next}`, data: { display_name: form.display_name.value.trim() } } })
       : await sb.auth.signInWithPassword(credentials);
+    btn.removeAttribute("aria-busy");
     btn.disabled = false;
+    btn.textContent = label;
     if (error) {
       formError.textContent = friendlyError(error);
       return;

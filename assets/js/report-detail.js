@@ -16,6 +16,14 @@ let sb, me, report;
 const isOwner = () => me && report.user_id === me.id;
 const isAdmin = () => me?.role === "admin";
 
+// Palavra grande do cartaz: a situação do animal, como num cartaz de poste.
+function posterWord(r) {
+  if (r.status === "reunited") return ["Reencontrado", "found"];
+  if (r.status === "closed") return ["Encerrado", "closed"];
+  if (r.kind === "lost") return ["Perdido", "lost"];
+  return [r.custody === "sighted" ? "Avistado" : "Encontrado", "found"];
+}
+
 function factsHtml(r) {
   const rows = [
     ["Espécie", SPECIES_LABEL[r.species]],
@@ -27,7 +35,7 @@ function factsHtml(r) {
     [r.kind === "lost" ? "Sumiu em" : r.custody === "sighted" ? "Visto em" : "Encontrado em", formatDate(r.event_date)],
     ["Bairro", r.neighborhood],
   ].filter((row) => row && row[1]);
-  return `<dl class="facts">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${escapeHtml(v)}</dd>`).join("")}</dl>`;
+  return `<dl class="facts">${rows.map(([k, v]) => `<div class="fact"><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join("")}</dl>`;
 }
 
 function noticesHtml() {
@@ -91,25 +99,35 @@ function bindStartForm() {
   const form = document.getElementById("start-form");
   if (!form) return;
   const text = form.querySelector("#first-message");
-  const check = () => {
-    let ok = true;
-    if (report.kind === "lost") {
-      const msg = form.context.value ? "" : "Escolha se você viu o animal ou se ele está com você.";
-      form.querySelector("#context-error").textContent = msg;
-      ok = !msg;
-    }
-    const msg = text.value.trim() ? "" : "Escreva a mensagem.";
+  const checkContext = () => {
+    if (report.kind !== "lost") return true;
+    const msg = form.context.value ? "" : "Escolha se você viu o animal ou se ele está com você.";
+    form.querySelector("#context-error").textContent = msg;
+    return !msg;
+  };
+  const checkText = () => {
+    const msg = text.value.trim() ? "" : "Escreva a mensagem; ela é o primeiro contato com quem anunciou.";
     form.querySelector("#first-message-error").textContent = msg;
     msg ? text.setAttribute("aria-invalid", "true") : text.removeAttribute("aria-invalid");
-    return ok && !msg;
+    return !msg;
   };
-  text.addEventListener("blur", () => text.value && check());
+  text.addEventListener("blur", checkText);
+  text.addEventListener("input", () => {
+    form.querySelector("#first-message-error").textContent = "";
+    text.removeAttribute("aria-invalid");
+  });
+  form.addEventListener("change", (e) => e.target.name === "context" && checkContext());
   form.addEventListener("input", () => form.querySelector("#start-error").textContent = "");
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!check()) return;
+    const contextOk = checkContext();
+    const textOk = checkText();
+    if (!contextOk) return form.querySelector('input[name="context"]').focus();
+    if (!textOk) return text.focus();
     const btn = form.querySelector("button[type=submit]");
+    btn.setAttribute("aria-busy", "true");
     btn.disabled = true;
+    btn.textContent = "Enviando…";
     const context = report.kind === "lost" ? form.context.value : "inquiry";
     const { data, error } = await sb.from("conversations")
       .insert({ report_id: report.id, asker_id: me.id, owner_id: report.user_id, asker_context: context })
@@ -121,7 +139,9 @@ function bindStartForm() {
         return;
       }
     }
+    btn.removeAttribute("aria-busy");
     btn.disabled = false;
+    btn.textContent = "Enviar mensagem";
     form.querySelector("#start-error").textContent = errorText(error, "A mensagem não foi enviada. Verifique a conexão e tente de novo.");
   });
 }
@@ -135,18 +155,27 @@ function ownerActionsHtml() {
 
 async function renderReport() {
   const url = photoUrl(sb, report.photo_path);
-  const photo = url
-    ? `<img class="detail-photo" src="${escapeHtml(url)}" alt="Foto de ${escapeHtml(reportTitle(report))}">`
-    : `<div class="detail-photo">${pawIcon}</div>`;
+  // Sem foto, o mapa do local ocupa o lugar dela (em vez de um quadro vazio).
+  const media = url
+    ? `<img class="detail-photo" src="${escapeHtml(url)}" alt="Foto de ${escapeHtml(reportTitle(report))}">
+       <div class="detail-map" id="detail-map" aria-label="Local aproximado"></div>`
+    : `<div class="detail-map detail-map-large" id="detail-map" aria-label="Local aproximado"></div>
+       <p class="muted small">Este anúncio não tem foto. O ponto no mapa é aproximado, com cerca de 100 m de margem.</p>`;
+  const [word, tone] = posterWord(report);
 
   document.title = `${reportTitle(report)} | PetSOS`;
   root.innerHTML = `
     <div class="detail">
-      <div style="display:grid;gap:var(--s4)">${photo}<div class="detail-map" id="detail-map" aria-label="Local aproximado"></div></div>
-      <div class="detail-info">
+      <div class="detail-head">
         ${noticesHtml()}
-        <div style="display:grid;gap:var(--s2)">${statusHtml(report)}<h1>${escapeHtml(reportTitle(report))}</h1>
-        <p class="muted">${escapeHtml(report.neighborhood)}, ${relativeDate(report.event_date)}</p></div>
+        <div class="poster-head">
+          <p class="poster-word poster-${tone}">${word}</p>
+          <h1>${escapeHtml(reportTitle(report))}</h1>
+          <p class="poster-where">${escapeHtml(report.neighborhood)}, ${relativeDate(report.event_date)}</p>
+        </div>
+      </div>
+      <div class="detail-media">${media}</div>
+      <div class="detail-info">
         ${factsHtml(report)}
         ${report.description ? `<p class="description">${escapeHtml(report.description)}</p>` : ""}
         ${await contactHtml()}
@@ -183,18 +212,21 @@ async function renderMatches() {
   }
 
   if (!body.matches.length) {
+    const opposite = report.kind === "lost" ? "found" : "lost";
     panel.innerHTML = `<div class="empty"><h3>Nenhum animal parecido por enquanto</h3>
-      <p class="muted">Cada novo anúncio aprovado do tipo oposto é comparado com este. Volte aqui nos próximos dias.</p></div>`;
+      <p class="muted">Cada novo anúncio aprovado do tipo oposto é comparado com este. Volte aqui nos próximos dias ou confira a lista completa.</p>
+      <a class="btn btn-secondary" href="/?tipo=${opposite}&especie=${report.species}">Ver animais ${opposite === "found" ? "encontrados" : "perdidos"}</a></div>`;
     return;
   }
 
-  panel.innerHTML = `<ul class="report-list">${body.matches.map(({ report: r, score, reasons }) => `
+  panel.innerHTML = `<ul class="report-list${body.matches.length > 1 ? " match-grid" : ""}">${body.matches.map(({ report: r, score, reasons }) => `
     <li><a class="report-row" href="/anuncio?id=${r.id}">
       ${thumbHtml(sb, r)}
       <div class="row-body">
         ${statusHtml(r)}
         <h3>${escapeHtml(reportTitle(r))}</h3>
         <p class="match-score">${Math.round(score * 100)}% de compatibilidade${r.custody === "sighted" ? ", só avistado" : ""}</p>
+        <span class="meter" aria-hidden="true"><span style="width:${Math.round(score * 100)}%"></span></span>
         <ul class="match-reasons">${reasons.slice(0, 3).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
       </div>
     </a></li>`).join("")}</ul>`;
@@ -245,9 +277,9 @@ async function main() {
     const { data, error } = await sb.from("reports").select(REPORT_FIELDS).eq("id", id).maybeSingle();
     if (error) throw error;
     report = data;
-  } catch {
+  } catch (err) {
     root.innerHTML = "";
-    showError(errorEl, CONNECTION_ERROR);
+    showError(errorEl, CONNECTION_ERROR, err);
     return;
   }
   if (!report) {

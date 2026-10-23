@@ -65,6 +65,13 @@ function validate(name) {
   return !message;
 }
 
+// Erro some na primeira tecla de correção; a regra roda de novo no próximo blur.
+function clearError(name) {
+  const errorEl = document.getElementById(`${name}-error`);
+  if (errorEl) errorEl.textContent = "";
+  fieldInputs(name).forEach((el) => el.removeAttribute("aria-invalid"));
+}
+
 function groupOf(target) {
   if (target.name === "colors") return "colors";
   if (target.id === "use-location" || target.id === "use-center") return "location";
@@ -133,10 +140,16 @@ function saveDraft() {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* sem armazenamento */ }
 }
 
+function draftHasContent(draft) {
+  return Boolean(draft.point || draft.colors?.length ||
+    DRAFT_FIELDS.some((n) => draft[n] && !(n === "sex" && draft[n] === "unknown") && n !== "event_date"));
+}
+
 function restoreDraft() {
   let draft;
   try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch { draft = null; }
-  if (!draft) return;
+  if (!draft || !draftHasContent(draft)) return;
+  document.getElementById("draft-notice").hidden = false;
   DRAFT_FIELDS.forEach((n) => {
     const el = form.elements[n];
     if (!el || !draft[n]) return;
@@ -156,6 +169,23 @@ function restoreDraft() {
 
 function clearDraft() {
   try { localStorage.removeItem(DRAFT_KEY); } catch { /* sem armazenamento */ }
+}
+
+function discardDraft() {
+  clearDraft();
+  form.reset();
+  form.event_date.value = today();
+  point = null;
+  pin?.remove();
+  pin = null;
+  touched.clear();
+  Object.keys(rules).forEach(clearError);
+  document.getElementById("location-status").textContent = "";
+  document.getElementById("photo-preview").innerHTML = pawIcon;
+  document.getElementById("photo-name").textContent = "Nenhuma foto escolhida.";
+  document.getElementById("draft-notice").hidden = true;
+  updateKindDependent();
+  form.querySelector('input[name="kind"]').focus();
 }
 
 // ---------- Envio ----------
@@ -236,9 +266,15 @@ form.addEventListener("focusout", (e) => {
 });
 form.addEventListener("input", (e) => {
   const name = groupOf(e.target);
-  if (name && touched.has(name)) validate(name);
+  // Campos de texto: só limpam o erro (revalidam no blur). Escolhas (rádio/caixa) são uma ação completa: validam já.
+  if (name && ["radio", "checkbox"].includes(e.target.type)) {
+    if (touched.has(name)) validate(name);
+  } else if (name) {
+    clearError(name);
+  }
   saveDraft();
 });
+document.getElementById("discard-draft").addEventListener("click", discardDraft);
 form.addEventListener("change", (e) => {
   if (e.target.name === "kind") {
     updateKindDependent();
@@ -250,6 +286,7 @@ form.addEventListener("change", (e) => {
     const preview = document.getElementById("photo-preview");
     const file = form.photo.files[0];
     preview.innerHTML = file && valid ? `<img class="photo-preview" src="${URL.createObjectURL(file)}" alt="Prévia da foto">` : pawIcon;
+    document.getElementById("photo-name").textContent = file ? `${file.name}.` : "Nenhuma foto escolhida.";
   }
   const name = groupOf(e.target);
   if (name && touched.has(name)) validate(name);
@@ -262,8 +299,8 @@ async function main() {
   try {
     sb = await getClient();
     session = (await sb.auth.getSession()).data.session;
-  } catch {
-    showError(document.getElementById("page-error"), CONNECTION_ERROR);
+  } catch (err) {
+    showError(document.getElementById("page-error"), CONNECTION_ERROR, err);
     return;
   }
   if (!session) {
@@ -277,6 +314,8 @@ async function main() {
   form.event_date.value = today();
   initMap();
   restoreDraft();
+  const preset = { perdido: "lost", encontrado: "found" }[new URLSearchParams(location.search).get("tipo")];
+  if (preset && !form.kind.value) form.querySelector(`input[name="kind"][value="${preset}"]`).checked = true;
   updateKindDependent();
 }
 

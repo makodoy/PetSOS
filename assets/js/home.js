@@ -7,6 +7,7 @@ const listEl = document.getElementById("report-list");
 const countEl = document.getElementById("result-count");
 const filtersEl = document.getElementById("filters");
 const colorSelect = document.getElementById("color-filter");
+const clearBtn = document.getElementById("clear-filters");
 
 const state = { sb: null, reports: [], markers: new Map(), selected: null, map: null };
 const filters = readFilters();
@@ -68,7 +69,9 @@ function render() {
   const open = items.filter((r) => r.status === "open").length;
   const reunited = items.length - open;
   countEl.textContent = `${open} ${open === 1 ? "anúncio aberto" : "anúncios abertos"}`
-    + (reunited ? `, ${reunited} ${reunited === 1 ? "reencontrado" : "reencontrados"} no último mês` : "");
+    + (reunited ? ` e ${reunited} ${reunited === 1 ? "reencontro" : "reencontros"} no último mês` : "")
+    + (hasFilters() ? " com estes filtros" : "");
+  clearBtn.hidden = !hasFilters();
 
   if (!items.length) {
     listEl.innerHTML = hasFilters()
@@ -125,12 +128,18 @@ filtersEl.addEventListener("change", (e) => {
   render();
 });
 filtersEl.addEventListener("submit", (e) => e.preventDefault());
-listEl.addEventListener("click", (e) => {
-  if (!e.target.closest("[data-clear]")) return;
+function clearFilters() {
   Object.assign(filters, { kind: "all", species: "", size: "", color: "" });
   syncFilterControls();
   writeFilters();
   render();
+}
+clearBtn.addEventListener("click", () => {
+  clearFilters();
+  filtersEl.querySelector('[data-kind="all"]').focus();
+});
+listEl.addEventListener("click", (e) => {
+  if (e.target.closest("[data-clear]")) clearFilters();
 });
 listEl.addEventListener("mouseover", (e) => {
   const row = e.target.closest(".report-row");
@@ -157,9 +166,9 @@ async function main() {
       .limit(300);
     if (error) throw error;
     state.reports = [...data.filter((r) => r.status === "open"), ...data.filter((r) => r.status !== "open")];
-  } catch {
+  } catch (err) {
     listEl.innerHTML = "";
-    showError(document.getElementById("page-error"), CONNECTION_ERROR);
+    showError(document.getElementById("page-error"), CONNECTION_ERROR, err);
     return;
   }
   buildMarkers();
