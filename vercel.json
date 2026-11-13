@@ -11,7 +11,7 @@
   "crons": [{ "path": "/api/notify", "schedule": "0 9 * * *" }],
   "rewrites": [
     { "source": "/a/:id", "destination": "/api/share?id=:id" },
-    { "source": "/:page(admin|anunciar|anuncio|cartaz|comparar|conta|conversa|conversas|entrar|meus|nova-senha|privacidade|termos)", "destination": "/pages/:page.html" }
+    { "source": "/:page(admin|anunciar|anuncio|cartaz|comparar|conta|conversa|conversas|entrar|meus|nova-senha|privacidade|termos)", "destination": "/pages/:page" }
   ],
   "headers": [
     {
