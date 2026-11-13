@@ -1,8 +1,8 @@
 import { CITY_CENTER, CITY_ZOOM } from "./constants.js";
 
-export function createMap(el, { center = CITY_CENTER, zoom = CITY_ZOOM, interactive = true } = {}) {
+export function createMap(el, { center = CITY_CENTER, zoom = CITY_ZOOM, interactive = true, wheelZoom = interactive } = {}) {
   const map = L.map(el, {
-    center, zoom, scrollWheelZoom: interactive, dragging: interactive || !L.Browser.mobile, zoomControl: interactive,
+    center, zoom, scrollWheelZoom: wheelZoom, dragging: interactive || !L.Browser.mobile, zoomControl: interactive,
   });
   // Tiles padrão do OpenStreetMap: gratuitos e sem chave (a CARTO passou a exigir API key).
   // No modo escuro, styles.css escurece os tiles com um filtro.

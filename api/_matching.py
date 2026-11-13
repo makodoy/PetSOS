@@ -5,16 +5,17 @@ distância geográfica e intervalo de datas.
 
 Fase futura (o toque inovador): similaridade de imagem. Implemente a interface
 `ImageSimilarity` (por exemplo, embeddings CLIP salvos em pgvector, ou uma API de
-visão) e registre-a em `IMAGE_MATCHERS`. Quando ela retorna um valor, o peso da
-imagem entra no cálculo e os demais pesos são renormalizados automaticamente;
-quando retorna None, nada muda.
+visão) e registre-a em `IMAGE_MATCHERS`. A comparação é em lote (uma consulta por
+anúncio, não uma por candidato). Quando há nota para o candidato, o peso da imagem
+entra no cálculo e os demais pesos são renormalizados automaticamente; sem nota,
+nada muda.
 """
 
 from __future__ import annotations
 
 import math
 import os
-from datetime import date
+from datetime import date, timedelta
 from typing import Callable, Dict, Iterable, List, Optional, Protocol
 
 SIZE_ORDER = {"small": 0, "medium": 1, "large": 2}
@@ -33,16 +34,22 @@ TIME_SCALE_DAYS = 21.0    # a 21 dias a nota de tempo cai para ~37%
 EARLY_TOLERANCE_DAYS = 2  # "encontrado" pode ter sido registrado até 2 dias antes do "perdido"
 MIN_SCORE = 0.35
 DEFAULT_LIMIT = 10
+WINDOW_DAYS = 90
+MAX_CANDIDATES = 500
+FIELDS = (
+    "id,kind,species,custody,pet_name,sex,size,colors,breed,photo_path,thumb_path,neighborhood,"
+    "lat,lng,event_date,status,review_status"
+)
 
 
 class ImageSimilarity(Protocol):
-    def compare(self, a: dict, b: dict) -> Optional[float]:
-        """Retorna similaridade entre 0 e 1, ou None quando não há como comparar."""
+    def compare_many(self, report: dict, candidates: List[dict]) -> Dict[str, float]:
+        """Retorna {id do candidato: similaridade entre 0 e 1}; candidato sem foto fica de fora."""
 
 
 class NoImageSimilarity:
-    def compare(self, a: dict, b: dict) -> Optional[float]:
-        return None
+    def compare_many(self, report: dict, candidates: List[dict]) -> Dict[str, float]:
+        return {}
 
 
 # Registre aqui os provedores futuros, ex.: {"clip": ClipPgvectorSimilarity}
@@ -52,6 +59,22 @@ IMAGE_MATCHERS: Dict[str, Callable[[], ImageSimilarity]] = {}
 def image_matcher_from_env() -> ImageSimilarity:
     factory = IMAGE_MATCHERS.get(os.environ.get("PETSOS_IMAGE_MATCHER", "").strip())
     return factory() if factory else NoImageSimilarity()
+
+
+def candidate_params(report: dict, now_iso: str) -> dict:
+    """Pré-filtro no banco: espécie, tipo oposto, aberto, aprovado, dentro da validade e da janela de datas."""
+    d = _to_date(report["event_date"])
+    lo, hi = d - timedelta(days=WINDOW_DAYS), d + timedelta(days=WINDOW_DAYS)
+    return {
+        "select": FIELDS,
+        "species": f"eq.{report['species']}",
+        "kind": f"eq.{'found' if report['kind'] == 'lost' else 'lost'}",
+        "status": "eq.open",
+        "review_status": "eq.approved",
+        "expires_at": f"gt.{now_iso}",
+        "and": f"(event_date.gte.{lo.isoformat()},event_date.lte.{hi.isoformat()})",
+        "limit": str(MAX_CANDIDATES),
+    }
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -96,7 +119,7 @@ def is_candidate(report: dict, other: dict) -> bool:
     return True
 
 
-def score_pair(report: dict, other: dict, image: ImageSimilarity = NoImageSimilarity()) -> dict:
+def score_pair(report: dict, other: dict, similarity: Optional[float] = None) -> dict:
     parts: Dict[str, float] = {}
     reasons: List[str] = []
 
@@ -140,7 +163,6 @@ def score_pair(report: dict, other: dict, image: ImageSimilarity = NoImageSimila
         reasons.append(f"Encontrado {days} dia{'s' if days > 1 else ''} depois do sumiço")
 
     weights = dict(WEIGHTS)
-    similarity = image.compare(report, other)
     if similarity is not None:
         parts["image"] = max(0.0, min(1.0, similarity))
         weights["image"] = IMAGE_WEIGHT
@@ -162,11 +184,11 @@ def rank(
     limit: int = DEFAULT_LIMIT,
     min_score: float = MIN_SCORE,
 ) -> List[dict]:
+    eligible = [other for other in candidates if is_candidate(report, other)]
+    similarities = image.compare_many(report, eligible) if eligible else {}
     results = []
-    for other in candidates:
-        if not is_candidate(report, other):
-            continue
-        result = score_pair(report, other, image)
+    for other in eligible:
+        result = score_pair(report, other, similarities.get(other.get("id")))
         if result["score"] >= min_score:
             results.append({"report": other, **result})
     results.sort(key=lambda r: r["score"], reverse=True)

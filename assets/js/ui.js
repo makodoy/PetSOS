@@ -1,5 +1,5 @@
 import { getClient, getProfile, PHOTO_BUCKET } from "./supabase.js";
-import { SPECIES_LABEL, KIND_LABEL } from "./constants.js";
+import { SPECIES_LABEL, KIND_LABEL, COLOR_LABEL } from "./constants.js";
 
 export const pawIcon = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="6" cy="10" rx="2.2" ry="2.8"/><ellipse cx="10" cy="6" rx="2.2" ry="2.8"/><ellipse cx="14.5" cy="6" rx="2.2" ry="2.8"/><ellipse cx="18.5" cy="10" rx="2.2" ry="2.8"/><path d="M12.2 11.5c-3 0-6.2 4.3-6.2 6.6 0 1.7 1.4 2.4 3 2.4 1.3 0 2-.6 3.2-.6s1.9.6 3.2.6c1.6 0 3-.7 3-2.4 0-2.3-3.2-6.6-6.2-6.6z"/></svg>`;
 
@@ -14,8 +14,27 @@ export function reportTitle(r) {
   return `${species} ${kind}`;
 }
 
-export function kindVerb(r) {
-  return r.kind === "lost" ? "Sumiu" : "Encontrado";
+// Palavra grande do cartaz: a situação do animal, como num cartaz de poste.
+export function posterWord(r) {
+  if (r.status === "reunited") return ["Reencontrado", "found"];
+  if (r.status === "closed") return ["Encerrado", "closed"];
+  if (r.kind === "lost") return ["Perdido", "lost"];
+  return [r.custody === "sighted" ? "Avistado" : "Encontrado", "found"];
+}
+
+// Título da página do anúncio: abaixo da palavra grande do cartaz, repetir "encontrado" não ajuda a reconhecer o animal.
+export function posterTitle(r) {
+  if (r.pet_name) return r.pet_name;
+  const colors = (r.colors ?? []).map((c) => (COLOR_LABEL[c] ?? c).toLowerCase());
+  const listed = colors.length > 1 ? `${colors.slice(0, -1).join(", ")} e ${colors.at(-1)}` : colors[0] ?? "";
+  return `${SPECIES_LABEL[r.species] ?? "Animal"} ${listed}`.trim();
+}
+
+// Faixa em vez de percentual: a nota compara atributos, não confirma que é o mesmo animal.
+export function matchTier(score) {
+  if (score >= 0.75) return "Muito parecido";
+  if (score >= 0.6) return "Parecido";
+  return "Pode ser";
 }
 
 export function relativeDate(isoDate) {
@@ -53,8 +72,8 @@ export function photoUrl(sb, path) {
 }
 
 export function thumbHtml(sb, r, className = "thumb") {
-  const url = photoUrl(sb, r.photo_path);
-  if (url) return `<img class="${className}" src="${escapeHtml(url)}" alt="" loading="lazy" width="76" height="76">`;
+  const url = photoUrl(sb, r.thumb_path || r.photo_path);
+  if (url) return `<img class="${className}" src="${escapeHtml(url)}" alt="" loading="lazy" width="480" height="360">`;
   return `<div class="${className}">${pawIcon}</div>`;
 }
 
@@ -100,10 +119,24 @@ export function formatDateTime(iso) {
   return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-// Mensagens de erro vindas das funções do banco já estão em português; o resto vira texto genérico.
+// P0001 é o código do "raise exception" das regras do banco, escritas em português. O resto vira texto genérico.
 export function errorText(error, fallback = "Não foi possível concluir agora. Verifique a conexão e tente de novo.") {
-  const msg = error?.message || "";
-  return /[ãçéíóúâêô]/i.test(msg) && msg.length < 200 ? msg : fallback;
+  return error?.code === "P0001" && error.message ? error.message : fallback;
+}
+
+// Denúncia de anúncio ou conversa. O banco aceita uma por pessoa e por item.
+export async function flagDialog(sb, target) {
+  const res = await confirmDialog({
+    title: "Denunciar para a moderação?",
+    body: "Um administrador vai analisar. A outra pessoa não fica sabendo quem denunciou.",
+    confirmLabel: "Enviar denúncia",
+    reasonLabel: "O que aconteceu?",
+    reasonRequired: true,
+  });
+  if (!res.ok) return;
+  const { error } = await sb.from("flags").insert({ ...target, reason: res.reason });
+  if (error?.code === "23505") return toast("Você já denunciou este item. A moderação vai analisar.");
+  toast(error ? errorText(error) : "Denúncia enviada para a moderação.");
 }
 
 // Diálogo de confirmação reutilizável. Retorna true/false (e o texto, quando há campo de motivo).
@@ -126,7 +159,7 @@ export function confirmDialog({ title, body, confirmLabel, danger = false, reaso
     dialog.querySelector("form").addEventListener("submit", (e) => {
       if (e.submitter?.value === "confirm" && reasonRequired && !reason.value.trim()) {
         e.preventDefault();
-        dialog.querySelector("#confirm-reason-error").textContent = "Escreva o motivo; ele aparece para quem anunciou.";
+        dialog.querySelector("#confirm-reason-error").textContent = "Escreva o motivo para continuar.";
         reason.setAttribute("aria-invalid", "true");
         reason.focus();
       }
@@ -176,6 +209,36 @@ function initThemeToggle() {
   sync();
 }
 
+const BRAND_MARK = `<svg class="brand-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="6" cy="10" rx="2.2" ry="2.8"/><ellipse cx="10" cy="6" rx="2.2" ry="2.8"/><ellipse cx="14.5" cy="6" rx="2.2" ry="2.8"/><ellipse cx="18.5" cy="10" rx="2.2" ry="2.8"/><path d="M12.2 11.5c-3 0-6.2 4.3-6.2 6.6 0 1.7 1.4 2.4 3 2.4 1.3 0 2-.6 3.2-.6s1.9.6 3.2.6c1.6 0 3-.7 3-2.4 0-2.3-3.2-6.6-6.2-6.6z"/></svg>`;
+
+// Cabeçalho comum: os HTML só trazem <header class="site-header"></header>, com a altura já reservada no CSS.
+function renderHeader() {
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+  header.innerHTML = `<div class="wrap header-inner">
+    <a class="brand" href="/">${BRAND_MARK}PetSOS</a>
+    <nav class="nav" id="site-nav" aria-label="Principal">
+      <a href="/" data-nav>Animais</a>
+      <a href="/conversas" data-nav data-auth="in" hidden>Mensagens<span class="nav-count" data-count="message"></span></a>
+      <a href="/meus" data-nav data-auth="in" hidden>Meus anúncios<span class="nav-count" data-count="other"></span></a>
+      <a href="/conta" data-nav data-auth="in" hidden>Minha conta</a>
+      <a href="/admin" data-nav data-admin hidden>Moderação</a>
+      <a href="/entrar" data-nav data-auth="out">Entrar</a>
+    </nav>
+    <button type="button" class="theme-toggle" aria-label="Usar tema escuro">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <a class="btn btn-primary btn-header" href="/anunciar">Anunciar</a>
+    <button type="button" class="btn btn-secondary menu-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+  </div>`;
+  const skip = document.createElement("a");
+  skip.className = "skip-link";
+  skip.href = "#conteudo";
+  skip.textContent = "Pular para o conteúdo";
+  document.body.prepend(skip);
+}
+
 // Rodapé comum, montado aqui para não repetir em cada HTML.
 function initFooter() {
   if (document.querySelector(".site-footer")) return;
@@ -183,13 +246,41 @@ function initFooter() {
   footer.className = "site-footer";
   footer.innerHTML = `<div class="wrap footer-inner">
     <p class="footer-brand">PetSOS</p>
-    <p>Protótipo acadêmico da Fatec Itapetininga para reunir animais perdidos e encontrados em Itapetininga e região.</p>
+    <p>Para reunir animais perdidos e encontrados em Itapetininga e região. Projeto criado na Fatec Itapetininga.</p>
     <p>O contato acontece só pelo chat do site, e o local publicado é aproximado, com cerca de 100 m de margem.</p>
+    <p class="footer-links"><a href="/privacidade">Privacidade</a> <a href="/termos">Termos de uso</a></p>
   </div>`;
   document.body.append(footer);
 }
 
+// Erros de JavaScript vão para os logs da Vercel: só a mensagem e a página, sem dados da pessoa.
+function initErrorReporting() {
+  let sent = 0;
+  const report = (message) => {
+    if (sent++ >= 5) return;
+    const body = JSON.stringify({ message: String(message).slice(0, 300), page: location.pathname });
+    try { navigator.sendBeacon?.("/api/log", new Blob([body], { type: "application/json" })); } catch { /* sem envio */ }
+  };
+  window.addEventListener("error", (e) => report(e.message));
+  window.addEventListener("unhandledrejection", (e) => report(e.reason?.message ?? e.reason));
+}
+
+async function renderCounts(sb, profile) {
+  const { data, error } = await sb.from("notifications").select("kind").eq("user_id", profile.id).is("read_at", null).neq("kind", "moderation").limit(200);
+  if (error) return;
+  const messages = data.filter((n) => n.kind === "message").length;
+  const others = data.length - messages;
+  const fill = (key, n, label) => {
+    const el = document.querySelector(`[data-count="${key}"]`);
+    if (el) el.innerHTML = n ? ` <span aria-hidden="true">(${n})</span><span class="visually-hidden">, ${n} ${label}</span>` : "";
+  };
+  fill("message", messages, messages === 1 ? "conversa com novidade" : "conversas com novidade");
+  fill("other", others, others === 1 ? "aviso novo" : "avisos novos");
+}
+
 export async function initHeader() {
+  renderHeader();
+  initErrorReporting();
   initThemeToggle();
   initFooter();
   const path = location.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
@@ -218,6 +309,7 @@ export async function initHeader() {
       el.hidden = (el.dataset.auth === "in") !== Boolean(profile);
     });
     document.querySelectorAll("[data-admin]").forEach((el) => (el.hidden = profile?.role !== "admin"));
+    if (profile) renderCounts(sb, profile);
     sb.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
         if (Boolean(profile) !== (event === "SIGNED_IN")) location.reload();

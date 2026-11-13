@@ -16,12 +16,14 @@ def make(**kw):
     return base
 
 
-class FixedImage:
-    def __init__(self, value):
-        self.value = value
+class CountingImage:
+    def __init__(self, scores):
+        self.scores = scores
+        self.calls = 0
 
-    def compare(self, a, b):
-        return self.value
+    def compare_many(self, report, candidates):
+        self.calls += 1
+        return self.scores
 
 
 class MatchingTest(unittest.TestCase):
@@ -55,11 +57,21 @@ class MatchingTest(unittest.TestCase):
     def test_image_similarity_is_pluggable(self):
         found = make(id="f", kind="found", lat=-23.62, lng=-48.08)
         base = score_pair(self.lost, found)["score"]
-        boosted = score_pair(self.lost, found, FixedImage(1.0))
-        lowered = score_pair(self.lost, found, FixedImage(0.0))["score"]
+        boosted = score_pair(self.lost, found, 1.0)
+        lowered = score_pair(self.lost, found, 0.0)["score"]
         self.assertGreater(boosted["score"], base)
         self.assertLess(lowered, base)
         self.assertIn("image", boosted["breakdown"])
+
+    def test_image_similarity_is_batched(self):
+        a = make(id="a", kind="found")
+        b = make(id="b", kind="found", lat=-23.6)
+        image = CountingImage({"b": 1.0})
+        result = rank(self.lost, [a, b], image=image, min_score=0)
+        self.assertEqual(image.calls, 1)
+        by_id = {r["report"]["id"]: r for r in result}
+        self.assertIn("image", by_id["b"]["breakdown"])
+        self.assertNotIn("image", by_id["a"]["breakdown"])
 
     def test_symmetric(self):
         found = make(id="f", kind="found", lat=-23.60, lng=-48.05, event_date=(TODAY + timedelta(days=5)).isoformat())

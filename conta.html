@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minha conta | PetSOS</title>
+  <meta name="description" content="Nome, avisos, dados e exclusão da sua conta no PetSOS.">
+  <meta name="theme-color" content="#F4F5F2">
+  <script src="/assets/js/theme-init.js"></script>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous" defer></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="wrap" id="conteudo" tabindex="-1">
+    <div class="page-narrow">
+      <div class="page-head"><h1>Minha conta</h1><p id="account-email"></p></div>
+      <div id="page-error"></div>
+      <div class="settings" id="account-root" hidden>
+        <form class="panel panel-pad" id="name-form" novalidate>
+          <h2>Seu nome</h2>
+          <div class="field">
+            <label for="display_name">Nome que aparece nas conversas</label>
+            <input type="text" id="display_name" name="display_name" maxlength="60" autocomplete="name" required>
+            <p class="field-error" id="display_name-error"></p>
+          </div>
+          <div><button type="submit" class="btn btn-secondary">Salvar nome</button></div>
+        </form>
+        <section class="panel panel-pad" aria-labelledby="alerts-title">
+          <h2 id="alerts-title">Avisos</h2>
+          <label class="check"><input type="checkbox" id="email-alerts"> Receber avisos por e-mail (mensagens, animais parecidos e entregas)</label>
+          <form class="alert-add" id="alert-form" novalidate>
+            <div class="field">
+              <label for="alert-neighborhood">Acompanhar um bairro</label>
+              <input type="text" id="alert-neighborhood" maxlength="80" autocomplete="off" list="neighborhood-list">
+              <datalist id="neighborhood-list"></datalist>
+            </div>
+            <button type="submit" class="btn btn-secondary">Acompanhar bairro</button>
+            <p class="field-error" id="alert-error" style="grid-column:1/-1"></p>
+          </form>
+          <ul class="alert-list" id="alert-list"></ul>
+        </section>
+        <section class="panel panel-pad" aria-labelledby="data-title">
+          <h2 id="data-title">Seus dados</h2>
+          <p class="muted">Baixe uma cópia ou exclua a conta. Saiba mais na <a href="/privacidade">política de privacidade</a>.</p>
+          <div class="owner-actions">
+            <button type="button" class="btn btn-secondary" id="export-data">Baixar meus dados</button>
+            <button type="button" class="btn btn-danger" id="delete-account">Excluir minha conta</button>
+          </div>
+        </section>
+        <div><button type="button" class="btn btn-secondary" data-action="signout">Sair da conta</button></div>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="/assets/js/account.js"></script>
+</body>
+</html>

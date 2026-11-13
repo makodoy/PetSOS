@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nova senha | PetSOS</title>
+  <meta name="description" content="Defina uma nova senha para sua conta no PetSOS.">
+  <meta name="theme-color" content="#F4F5F2">
+  <script src="/assets/js/theme-init.js"></script>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous" defer></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="wrap" id="conteudo" tabindex="-1">
+    <div class="auth">
+      <div class="page-head"><h1>Nova senha</h1><p id="reset-intro">Escolha uma senha nova para a sua conta.</p></div>
+      <div id="page-error"></div>
+      <form class="form panel panel-pad" id="reset-form" novalidate hidden>
+        <div class="field">
+          <label for="password">Nova senha</label>
+          <input type="password" id="password" name="password" autocomplete="new-password" minlength="8" required>
+          <p class="hint">Pelo menos 8 caracteres.</p>
+          <p class="field-error" id="password-error"></p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="reset-submit">Salvar nova senha</button>
+        <p class="field-error" id="form-error" role="alert"></p>
+      </form>
+      <section class="panel panel-pad empty" id="reset-expired" hidden>
+        <h2>Este link não vale mais</h2>
+        <p class="muted">Peça um novo link na tela de entrada. Ele chega no seu e-mail em alguns minutos.</p>
+        <a class="btn btn-primary" href="/entrar">Pedir novo link</a>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/assets/js/new-password.js"></script>
+</body>
+</html>

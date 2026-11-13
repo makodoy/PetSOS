@@ -1,5 +1,5 @@
 import { getClient } from "./supabase.js";
-import { initHeader, safeNext, showError, CONNECTION_ERROR } from "./ui.js";
+import { initHeader, escapeHtml, safeNext, showError, CONNECTION_ERROR } from "./ui.js";
 
 const form = document.getElementById("auth-form");
 const next = safeNext(new URLSearchParams(location.search).get("next"));
@@ -38,6 +38,8 @@ function setMode(m) {
   document.getElementById("switch-mode").textContent = signup ? "Entrar" : "Criar conta";
   document.getElementById("password-hint").hidden = !signup;
   document.getElementById("name-field").hidden = !signup;
+  document.getElementById("forgot").hidden = signup;
+  document.getElementById("auth-terms").hidden = !signup;
   form.password.autocomplete = signup ? "new-password" : "current-password";
   document.getElementById("form-error").textContent = "";
 }
@@ -62,6 +64,16 @@ async function main() {
     return;
   }
 
+  document.getElementById("forgot").addEventListener("click", async () => {
+    touched.add("email");
+    if (!validate("email")) return form.email.focus();
+    const formError = document.getElementById("form-error");
+    const { error } = await sb.auth.resetPasswordForEmail(form.email.value.trim(), { redirectTo: `${location.origin}/nova-senha` });
+    // Mesma resposta exista ou não a conta: a tela não revela quem está cadastrado.
+    formError.textContent = error && /rate limit/i.test(error.message)
+      ? friendlyError(error)
+      : "Se houver uma conta com este e-mail, enviamos um link para criar uma nova senha.";
+  });
   document.getElementById("switch-mode").addEventListener("click", () => setMode(mode === "signin" ? "signup" : "signin"));
   form.addEventListener("focusout", (e) => {
     if (!rules[e.target.name]) return;
@@ -76,7 +88,9 @@ async function main() {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     ["display_name", "email", "password"].forEach((n) => touched.add(n));
-    if (![validate("display_name"), validate("email"), validate("password")].every(Boolean)) return;
+    if (![validate("display_name"), validate("email"), validate("password")].every(Boolean)) {
+      return form.querySelector('[aria-invalid="true"]')?.focus();
+    }
     const btn = document.getElementById("auth-submit");
     const formError = document.getElementById("form-error");
     const label = btn.textContent;
@@ -97,7 +111,7 @@ async function main() {
     }
     if (mode === "signup" && !data.session) {
       formError.textContent = "";
-      form.innerHTML = `<div class="empty" style="padding:0"><h2>Confirme seu e-mail</h2><p class="muted">Enviamos um link para ${credentials.email.replace(/[<>&"]/g, "")}. Abra o link para ativar a conta e voltar ao PetSOS.</p></div>`;
+      form.innerHTML = `<div class="empty" style="padding:0"><h2>Confirme seu e-mail</h2><p class="muted">Enviamos um link para ${escapeHtml(credentials.email)}. Abra o link para ativar a conta e voltar ao PetSOS.</p></div>`;
       return;
     }
     location.href = next;
