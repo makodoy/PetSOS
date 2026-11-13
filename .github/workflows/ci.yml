@@ -15,6 +15,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python3 tests/test_matching.py -v
+      - run: python3 tests/test_jobs.py -v
 
   database:
     name: Regras do banco (PostgreSQL 16)
@@ -32,3 +33,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sh supabase/tests/run.sh
+
+  screens:
+    name: Telas no Chrome (back-end falso)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm i --no-save puppeteer-core@25.16.0
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "1"
+      - run: node tests/e2e/smoke.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
