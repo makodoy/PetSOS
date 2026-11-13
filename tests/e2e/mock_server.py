@@ -24,7 +24,11 @@ LATER = (datetime.now(timezone.utc) + timedelta(days=50)).isoformat()
 WRITES = []
 
 with open(os.path.join(ROOT, "vercel.json"), encoding="utf-8") as f:
-    CSP = next(h["value"] for h in json.load(f)["headers"][0]["headers"] if h["key"] == "Content-Security-Policy")
+    VERCEL = json.load(f)
+CSP = next(h["value"] for h in VERCEL["headers"][0]["headers"] if h["key"] == "Content-Security-Policy")
+# Mesma regra da Vercel: /anuncio é servido de pages/anuncio.html. Página fora da lista dá 404 aqui também.
+PAGES_RULE = next(r for r in VERCEL["rewrites"] if r["destination"].startswith("/pages/"))
+PAGES = set(PAGES_RULE["source"].split("(", 1)[1].rstrip(")").split("|"))
 CSP = CSP.replace("https://*.supabase.co", ORIGIN).replace("wss://*.supabase.co", f"ws://localhost:{PORT}")
 
 
@@ -120,9 +124,9 @@ class Handler(BaseHTTPRequestHandler):
         if p.startswith("/rest/v1/"):
             return self.rest(p.split("/")[-1], q)
         path = "/index.html" if p == "/" else p
+        if p.lstrip("/") in PAGES:
+            path = f"/pages{p}.html"
         file = ROOT + path
-        if not os.path.exists(file):
-            file = ROOT + path + ".html"
         if not os.path.isfile(file):
             return self.out(b"", "text/plain", code=404)
         with open(file, "rb") as f:

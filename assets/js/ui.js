@@ -180,7 +180,7 @@ export function confirmDialog({ title, body, confirmLabel, danger = false, reaso
 }
 
 const THEME_KEY = "petsos:theme";
-const THEME_COLOR = { light: "#F4F5F2", dark: "#161B19" };
+const THEME_COLOR = { light: "#4A2582", dark: "#2B1650" };
 
 // O <head> de cada página já aplica o tema salvo antes de desenhar (evita piscar); aqui só o botão.
 function initThemeToggle() {

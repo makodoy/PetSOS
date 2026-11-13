@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Meus anúncios | PetSOS</title>
-  <meta name="description" content="Seus anúncios no PetSOS.">
-  <meta name="theme-color" content="#F4F5F2">
+  <title>Mensagens | PetSOS</title>
+  <meta name="description" content="Suas conversas no PetSOS.">
+  <meta name="theme-color" content="#4A2582">
   <script src="/assets/js/theme-init.js"></script>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,22 +19,18 @@
   <main class="wrap" id="conteudo" tabindex="-1">
     <div class="page-narrow">
       <div class="page-head">
-        <h1>Meus anúncios</h1>
-        <p>Acompanhe cada caso: situação, animais parecidos e mensagens.</p>
+        <h1>Mensagens</h1>
+        <p id="inbox-sub">Conversas com quem viu, encontrou ou está procurando um animal.</p>
       </div>
       <div id="page-error"></div>
-      <section class="panel" id="notice-panel" aria-labelledby="notice-title" style="margin-bottom:var(--s4)" hidden>
-        <h2 class="notice-title" id="notice-title">Avisos novos</h2>
-        <ul class="notice-list" id="notices" style="margin:0"></ul>
-      </section>
-      <section class="panel" aria-label="Meus anúncios">
-        <ul class="report-list" id="my-list">
+      <section class="panel" aria-label="Conversas">
+        <ul class="report-list" id="inbox">
           <li class="skeleton-row" aria-hidden="true"><span></span><span></span></li>
           <li class="skeleton-row" aria-hidden="true"><span></span><span></span></li>
         </ul>
       </section>
     </div>
   </main>
-  <script type="module" src="/assets/js/mine.js"></script>
+  <script type="module" src="/assets/js/inbox.js"></script>
 </body>
 </html>
