@@ -5,13 +5,20 @@ title PetSOS - Diagrama de Atividades: anúncio, conversa e entrega
 start
 :Envia anúncio (perdido ou encontrado);
 note right: encontrado: "está comigo" ou "só vi"
-|Administrador|
-if (Anúncio adequado?) then (sim)
-  :Aprova anúncio;
+|Sistema|
+if (E-mail confirmado?) then (sim)
+  :Publica na hora e coloca na revisão posterior;
 else (não)
-  :Recusa com motivo;
-  stop
+  |Administrador|
+  if (Anúncio adequado?) then (sim)
+    :Aprova anúncio;
+  else (não)
+    :Recusa com motivo;
+    stop
+  endif
 endif
+|Sistema|
+:Compara com anúncios do tipo oposto e avisa os donos;
 |Interessado|
 :Abre o anúncio e envia mensagem;
 note right: em anúncio perdido: "vi o animal" ou "está comigo"
@@ -20,15 +27,21 @@ if (Animal está com alguém?) then (não, só avistado)
   stop
 else (sim)
 endif
-repeat
-  |Tutor|
-  :Descreve sinais que só o tutor saberia;
-  |Quem está com o animal|
-  :Envia a conversa para revisão (cópia congelada);
+|Tutor|
+:Descreve sinais que só o tutor saberia;
+|Quem está com o animal|
+:Inicia a entrega (cópia congelada da conversa);
+if (Houve denúncia?) then (sim)
   |Administrador|
-  :Lê a conversa;
-repeat while (Liberar entrega?) is (não, recusa com motivo)
-->sim;
+  :Analisa a conversa;
+  if (Cancelar a entrega?) then (sim)
+    :Cancela com motivo;
+    note right: quem está com o animal pode iniciar de novo
+    stop
+  else (não)
+  endif
+else (não)
+endif
 |Quem está com o animal|
 :Entrega o animal e confirma a entrega;
 |Tutor|

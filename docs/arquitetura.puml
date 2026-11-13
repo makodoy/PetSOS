@@ -14,16 +14,19 @@ cloud "Vercel" {
   component "Site estático (CDN)" as cdn
   component "Python /api/matches\n(motor de correspondência)" as match
   component "Python /api/config" as cfg
+  component "Python /api/notify\n(parecidos, avisos, e-mails,\nexpiração, fotos órfãs)" as notify
+  component "Python /a/<id>\n(prévia de link)" as share
 }
 
 cloud "Supabase" {
   component "Auth" as auth
-  database "PostgreSQL\nprofiles, reports, conversations,\nmessages, handovers\nRLS + gatilhos + funções" as db
+  database "PostgreSQL\nprofiles, reports, conversations,\nmessages, handovers, notifications,\nflags, blocks, matches\nRLS + gatilhos + funções" as db
   component "Realtime\n(chat e entrega)" as rt
   storage "Storage\npet-photos" as st
 }
 
 cloud "OpenStreetMap" as tiles
+cloud "Provedor de e-mail" as mail
 component "Similaridade de imagem\n(fase futura, plugável)" as img #line.dashed
 node "GitHub\nmakodoy/PetSOS" as gh
 
@@ -38,6 +41,12 @@ fe --> st : fotos
 fe --> match : GET /api/matches?id= (token do usuário)
 match --> db : PostgREST com RLS
 match ..> img : ImageSimilarity
+db --> notify : webhook (mudanças)
+cdn --> notify : cron diário
+notify --> db : service role
+notify --> st : remove fotos órfãs
+notify --> mail : avisos
+share --> db : PostgREST com RLS
 fe --> tiles : mapa base
 gh --> cdn : deploy contínuo
 @enduml
