@@ -35,5 +35,7 @@ export function getProfile() {
 }
 
 export const PHOTO_BUCKET = "pet-photos";
-export const REPORT_FIELDS =
-  "id,user_id,kind,species,custody,pet_name,sex,size,colors,breed,description,photo_path,neighborhood,lat,lng,event_date,status,review_status,review_note,created_at";
+// Visitantes não leem user_id (o banco recusa); quem tem conta precisa dele para saber se o anúncio é seu.
+export const PUBLIC_REPORT_FIELDS =
+  "id,kind,species,custody,pet_name,sex,size,colors,breed,description,photo_path,thumb_path,neighborhood,lat,lng,event_date,status,review_status,has_owner,expires_at,created_at";
+export const REPORT_FIELDS = `${PUBLIC_REPORT_FIELDS},user_id,review_note,reviewed_at`;

@@ -1,81 +1,103 @@
 import { getClient, getProfile, REPORT_FIELDS } from "./supabase.js";
-import { SPECIES_LABEL, CUSTODY_LABEL, KIND_LABEL } from "./constants.js";
+import { COLOR_LABEL, SPECIES_LABEL, SIZE_LABEL, SEX_LABEL, CUSTODY_LABEL, KIND_LABEL } from "./constants.js";
 import { initHeader, escapeHtml, reportTitle, thumbHtml, relativeDate, formatDateTime, statusHtml, showError, toast, confirmDialog, errorText, CONNECTION_ERROR } from "./ui.js";
 
 const root = document.getElementById("admin-root");
 const reportsList = document.getElementById("pending-reports");
-const handoversList = document.getElementById("pending-handovers");
-let sb;
+const flagsList = document.getElementById("open-flags");
+let sb, me;
 let reports = [];
-let handovers = [];
+let flags = [];
 
 function kindLine(r) {
   return [KIND_LABEL[r.kind], SPECIES_LABEL[r.species], r.kind === "found" ? CUSTODY_LABEL[r.custody] : null].filter(Boolean).join(", ");
 }
 
+function animalLine(r) {
+  return [SIZE_LABEL[r.size], SEX_LABEL[r.sex], r.colors.map((c) => COLOR_LABEL[c] ?? c).join(" e "), r.breed].filter(Boolean).join(", ");
+}
+
 function renderCounts() {
   document.getElementById("count-reports").textContent = `(${reports.length})`;
-  document.getElementById("count-handovers").textContent = `(${handovers.length})`;
+  document.getElementById("count-flags").textContent = `(${flags.length})`;
 }
 
 function renderReports() {
   renderCounts();
   if (!reports.length) {
-    reportsList.innerHTML = `<li class="empty"><h3>Nenhum anúncio aguardando aprovação</h3><p class="muted">Anúncios novos aparecem aqui assim que são enviados.</p></li>`;
+    reportsList.innerHTML = `<li class="empty"><h3>Nenhum anúncio para revisar</h3><p class="muted">Anúncios novos e editados aparecem aqui assim que são enviados.</p></li>`;
     return;
   }
-  reportsList.innerHTML = reports.map((r) => `<li class="mod-item" data-id="${r.id}">
-    <div class="report-row" style="padding:0">
+  reportsList.innerHTML = reports.map((r) => {
+    const live = r.review_status === "approved";
+    return `<li class="mod-item" data-id="${r.id}">
+    <div class="mod-media">
       ${thumbHtml(sb, r)}
       <div class="row-body">
         ${statusHtml(r)}
         <h3><a href="/anuncio?id=${r.id}">${escapeHtml(reportTitle(r))}</a></h3>
-        <p class="row-meta">${escapeHtml(kindLine(r))}. ${escapeHtml(r.neighborhood)}, ${relativeDate(r.event_date)}</p>
-        <p class="row-meta">Enviado por ${escapeHtml(r.owner?.display_name || "usuário")} em ${formatDateTime(r.created_at)}</p>
+        <p class="small"><strong>${live ? "Já publicado, falta revisar" : "Aguardando aprovação"}</strong></p>
+        <p class="small muted">${escapeHtml(kindLine(r))}. ${escapeHtml(animalLine(r))}.</p>
+        <p class="small muted">${escapeHtml(r.neighborhood)}, ${relativeDate(r.event_date)}. Enviado por ${escapeHtml(r.owner?.display_name || "usuário")} em ${formatDateTime(r.created_at)}.</p>
+        ${r.description ? `<p class="mod-text">${escapeHtml(r.description)}</p>` : ""}
       </div>
     </div>
-    ${r.description ? `<p class="mod-text">${escapeHtml(r.description)}</p>` : ""}
     <div class="owner-actions">
-      <button type="button" class="btn btn-primary" data-act="approve-report">Aprovar anúncio</button>
-      <button type="button" class="btn btn-danger" data-act="reject-report">Recusar</button>
+      <button type="button" class="btn btn-primary" data-act="approve-report">${live ? "Manter publicado" : "Aprovar anúncio"}</button>
+      <button type="button" class="btn btn-danger" data-act="reject-report">${live ? "Retirar do ar" : "Recusar"}</button>
     </div>
-  </li>`).join("");
+  </li>`;
+  }).join("");
 }
 
-function transcriptHtml(h) {
-  const finder = escapeHtml(h.finder?.display_name || "Quem está com o animal");
-  const claimant = escapeHtml(h.claimant?.display_name || "Tutor");
-  return `<ol class="transcript" aria-label="Conversa enviada para revisão">${(h.transcript || []).map((m) => `
-    <li class="bubble ${m.from === "finder" ? "" : "bubble-mine"}">
-      <p class="bubble-meta">${m.from === "finder" ? `${finder} (está com o animal)` : `${claimant} (diz ser o tutor)`}, ${formatDateTime(m.at)}</p>
-      <p class="bubble-body">${escapeHtml(m.body)}</p>
-    </li>`).join("")}</ol>`;
+function flagTarget(f) {
+  if (f.report) return { title: reportTitle(f.report), href: `/anuncio?id=${f.report.id}`, label: "Anúncio" };
+  const c = f.conversation;
+  return {
+    title: `${c?.asker?.display_name || "usuário"} e ${c?.owner?.display_name || "usuário"}`,
+    href: `/conversa?id=${f.conversation_id}`,
+    label: "Conversa",
+  };
 }
 
-function renderHandovers() {
+function activeHandover(f) {
+  const h = Array.isArray(f.conversation?.handovers) ? f.conversation.handovers[0] : f.conversation?.handovers;
+  return h && (h.status === "approved" || h.status === "under_review") ? h : null;
+}
+
+function renderFlags() {
   renderCounts();
-  if (!handovers.length) {
-    handoversList.innerHTML = `<li class="empty"><h3>Nenhuma entrega aguardando revisão</h3><p class="muted">Quando alguém que está com um animal enviar a conversa, ela aparece aqui.</p></li>`;
+  if (!flags.length) {
+    flagsList.innerHTML = `<li class="empty"><h3>Nenhuma denúncia aberta</h3><p class="muted">Denúncias de anúncios e de conversas aparecem aqui.</p></li>`;
     return;
   }
-  handoversList.innerHTML = handovers.map((h) => `<li class="mod-item" data-id="${h.id}">
-    <div class="report-row" style="padding:0">
-      ${h.report ? thumbHtml(sb, h.report) : ""}
+  flagsList.innerHTML = flags.map((f) => {
+    const target = flagTarget(f);
+    return `<li class="mod-item" data-id="${f.id}">
       <div class="row-body">
-        <h3><a href="/anuncio?id=${h.report?.id}">${escapeHtml(h.report ? reportTitle(h.report) : "Anúncio")}</a></h3>
-        <p class="row-meta">Está com o animal: ${escapeHtml(h.finder?.display_name || "usuário")}</p>
-        <p class="row-meta">Diz ser o tutor: ${escapeHtml(h.claimant?.display_name || "usuário")}</p>
-        <p class="row-meta">Enviado em ${formatDateTime(h.updated_at)}</p>
+        <p class="small muted">${target.label}, denúncia de ${escapeHtml(f.reporter?.display_name || "conta excluída")} em ${formatDateTime(f.created_at)}</p>
+        <h3><a href="${target.href}">${escapeHtml(target.title)}</a></h3>
+        <p class="mod-text">${escapeHtml(f.reason)}</p>
       </div>
-    </div>
-    ${h.report?.description ? `<p class="mod-text"><strong>Descrição do anúncio:</strong> ${escapeHtml(h.report.description)}</p>` : ""}
-    ${transcriptHtml(h)}
-    <div class="owner-actions">
-      <button type="button" class="btn btn-primary" data-act="approve-handover">Liberar entrega</button>
-      <button type="button" class="btn btn-danger" data-act="reject-handover">Recusar</button>
-      <a class="btn btn-secondary" href="/conversa?id=${h.conversation_id}">Abrir conversa completa</a>
-    </div>
-  </li>`).join("");
+      <div class="owner-actions">
+        <a class="btn btn-secondary" href="${target.href}">Abrir ${target.label.toLowerCase()}</a>
+        ${f.report_id ? `<button type="button" class="btn btn-danger" data-act="takedown">Retirar anúncio do ar</button>` : ""}
+        ${activeHandover(f) ? `<button type="button" class="btn btn-danger" data-act="cancel-handover">Cancelar entrega</button>` : ""}
+        <button type="button" class="btn btn-secondary" data-act="resolve">Concluir denúncia</button>
+      </div>
+    </li>`;
+  }).join("");
+}
+
+async function resolveFlag(id) {
+  const { error } = await sb.from("flags").update({ status: "resolved", resolved_by: me.id, resolved_at: new Date().toISOString() }).eq("id", id);
+  if (error) {
+    toast(errorText(error));
+    return false;
+  }
+  flags = flags.filter((x) => x.id !== id);
+  renderFlags();
+  return true;
 }
 
 root.addEventListener("click", async (e) => {
@@ -86,12 +108,13 @@ root.addEventListener("click", async (e) => {
 
   if (act === "approve-report" || act === "reject-report") {
     const r = reports.find((x) => x.id === id);
-    let patch = { review_status: "approved", review_note: null };
+    const live = r.review_status === "approved";
+    let patch = { review_status: "approved", review_note: null, reviewed_at: new Date().toISOString() };
     if (act === "reject-report") {
       const res = await confirmDialog({
-        title: `Recusar anúncio de ${reportTitle(r)}?`,
-        body: "Quem anunciou vê o motivo e pode enviar um novo anúncio corrigido.",
-        confirmLabel: "Recusar anúncio",
+        title: `${live ? "Retirar do ar" : "Recusar"} o anúncio de ${reportTitle(r)}?`,
+        body: "Quem anunciou vê o motivo e pode corrigir o anúncio.",
+        confirmLabel: live ? "Retirar do ar" : "Recusar anúncio",
         danger: true,
         reasonLabel: "Motivo",
         reasonRequired: true,
@@ -107,32 +130,42 @@ root.addEventListener("click", async (e) => {
     }
     reports = reports.filter((x) => x.id !== id);
     renderReports();
-    toast(act === "approve-report" ? "Anúncio aprovado e publicado." : "Anúncio recusado.");
+    toast(act === "approve-report" ? "Anúncio revisado e publicado." : "Anúncio fora do ar. Quem anunciou vê o motivo.");
   }
 
-  if (act === "approve-handover" || act === "reject-handover") {
-    const approve = act === "approve-handover";
+  if (act === "takedown") {
+    const f = flags.find((x) => x.id === id);
     const res = await confirmDialog({
-      title: approve ? "Liberar a entrega?" : "Recusar a revisão?",
-      body: approve
-        ? "As duas pessoas poderão confirmar a entrega. O anúncio só vira reencontrado quando as duas confirmarem."
-        : "As duas pessoas veem o motivo. Quem está com o animal pode enviar a conversa de novo depois.",
-      confirmLabel: approve ? "Liberar entrega" : "Recusar revisão",
-      danger: !approve,
-      reasonLabel: approve ? "Observação para as duas pessoas (opcional)" : "Motivo",
-      reasonRequired: !approve,
+      title: `Retirar do ar o anúncio de ${reportTitle(f.report)}?`,
+      body: "Quem anunciou vê o motivo e pode corrigir o anúncio. A denúncia é concluída junto.",
+      confirmLabel: "Retirar do ar",
+      danger: true,
+      reasonLabel: "Motivo",
+      reasonRequired: true,
     });
     if (!res.ok) return;
-    btn.disabled = true;
-    const { error } = await sb.rpc("review_handover", { p_handover_id: id, p_approve: approve, p_note: res.reason || null });
-    if (error) {
-      btn.disabled = false;
-      return toast(errorText(error));
-    }
-    handovers = handovers.filter((x) => x.id !== id);
-    renderHandovers();
-    toast(approve ? "Entrega liberada." : "Revisão recusada.");
+    const { error } = await sb.from("reports").update({ review_status: "rejected", review_note: res.reason }).eq("id", f.report_id);
+    if (error) return toast(errorText(error));
+    if (await resolveFlag(id)) toast("Anúncio retirado do ar.");
   }
+
+  if (act === "cancel-handover") {
+    const f = flags.find((x) => x.id === id);
+    const res = await confirmDialog({
+      title: "Cancelar esta entrega?",
+      body: "As duas pessoas veem o motivo. Quem está com o animal pode iniciar a entrega de novo depois.",
+      confirmLabel: "Cancelar entrega",
+      danger: true,
+      reasonLabel: "Motivo",
+      reasonRequired: true,
+    });
+    if (!res.ok) return;
+    const { error } = await sb.rpc("cancel_handover", { p_handover_id: activeHandover(f).id, p_note: res.reason });
+    if (error) return toast(errorText(error));
+    if (await resolveFlag(id)) toast("Entrega cancelada.");
+  }
+
+  if (act === "resolve" && await resolveFlag(id)) toast("Denúncia concluída.");
 });
 
 // Abas com setas do teclado
@@ -145,7 +178,7 @@ function selectTab(tab, focus = true) {
     document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
   });
   if (focus) tab.focus();
-  history.replaceState(null, "", tab.id === "tab-handovers" ? "?fila=entregas" : location.pathname);
+  history.replaceState(null, "", tab.id === "tab-flags" ? "?fila=denuncias" : location.pathname);
 }
 tabs.forEach((t, i) => {
   t.addEventListener("click", () => selectTab(t));
@@ -157,9 +190,17 @@ tabs.forEach((t, i) => {
   });
 });
 
+function renderMetrics(m) {
+  const rows = [
+    ["Anúncios abertos", m.open_reports],
+    ["Reencontros em 30 dias", m.reunions_30d],
+    ["Dias até o reencontro (mediana)", m.median_days ?? "Sem dados"],
+  ];
+  document.getElementById("metrics").innerHTML = rows.map(([k, v]) => `<div class="fact"><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join("");
+}
+
 async function main() {
   initHeader();
-  let me;
   try {
     sb = await getClient();
     me = await getProfile();
@@ -170,22 +211,28 @@ async function main() {
   if (me.role !== "admin") {
     return showError(document.getElementById("page-error"), "Esta área é só para administradores. Se você deveria ter acesso, peça para um administrador atual liberar sua conta.");
   }
-  const [r, h] = await Promise.all([
+  const [r, f, m] = await Promise.all([
     sb.from("reports").select(`${REPORT_FIELDS}, owner:profiles!reports_user_id_fkey(display_name)`)
-      .eq("review_status", "pending").order("created_at"),
-    sb.from("handovers").select(`id, status, transcript, conversation_id, updated_at,
-        report:reports!handovers_report_id_fkey(id, kind, species, custody, pet_name, photo_path, description),
-        finder:profiles!handovers_finder_id_fkey(display_name),
-        claimant:profiles!handovers_claimant_id_fkey(display_name)`)
-      .eq("status", "under_review").order("updated_at"),
+      .or("review_status.eq.pending,and(review_status.eq.approved,reviewed_at.is.null)").neq("status", "closed").order("created_at"),
+    sb.from("flags").select(`id, reason, created_at, report_id, conversation_id,
+        reporter:profiles!flags_reporter_id_fkey(display_name),
+        report:reports(id, kind, species, pet_name),
+        conversation:conversations(id, handovers(id, status),
+          asker:profiles!conversations_asker_id_fkey(display_name),
+          owner:profiles!conversations_owner_id_fkey(display_name))`)
+      .eq("status", "open").order("created_at"),
+    sb.rpc("admin_metrics"),
   ]);
-  if (r.error || h.error) return showError(document.getElementById("page-error"), CONNECTION_ERROR, r.error || h.error);
+  if (r.error || f.error) return showError(document.getElementById("page-error"), CONNECTION_ERROR, r.error || f.error);
   reports = r.data;
-  handovers = h.data;
+  flags = f.data;
+  if (m.data) renderMetrics(m.data);
   root.hidden = false;
   renderReports();
-  renderHandovers();
-  if (new URLSearchParams(location.search).get("fila") === "entregas") selectTab(document.getElementById("tab-handovers"), false);
+  renderFlags();
+  if (new URLSearchParams(location.search).get("fila") === "denuncias") selectTab(document.getElementById("tab-flags"), false);
+  // Ao abrir a fila, o próximo item novo volta a gerar aviso por e-mail.
+  sb.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", me.id).eq("kind", "moderation").is("read_at", null).then(() => {});
 }
 
 main();

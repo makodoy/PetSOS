@@ -6,7 +6,7 @@ const list = document.getElementById("inbox");
 const reportFilter = new URLSearchParams(location.search).get("anuncio");
 
 export const CONVERSATION_SELECT = `id, report_id, asker_id, owner_id, asker_context, last_message_at,
-  report:reports(id, kind, species, custody, pet_name, photo_path, status, neighborhood),
+  report:reports(id, kind, species, custody, pet_name, photo_path, thumb_path, status, neighborhood),
   asker:profiles!conversations_asker_id_fkey(display_name),
   owner:profiles!conversations_owner_id_fkey(display_name),
   handovers(id, status)`;
@@ -55,6 +55,9 @@ async function main() {
       <a class="btn btn-secondary" href="/">Ver animais</a></li>`;
     return;
   }
+  const { data: unread } = await sb.from("notifications").select("conversation_id")
+    .eq("user_id", me.id).eq("kind", "message").is("read_at", null);
+  const unreadIds = new Set((unread ?? []).map((n) => n.conversation_id));
   list.innerHTML = data.map((c) => {
     const other = c.asker_id === me.id ? c.owner?.display_name : c.asker?.display_name;
     const h = one(c.handovers);
@@ -63,7 +66,7 @@ async function main() {
       <div class="row-body">
         <h3>${escapeHtml(c.report ? reportTitle(c.report) : "Anúncio removido")}</h3>
         <p class="row-meta">Com ${escapeHtml(other || "usuário")}. ${escapeHtml(contextLine(c, me.id))}</p>
-        <p class="row-meta">${h ? `<strong>${HANDOVER_LABEL[h.status]}</strong>, ` : ""}${formatDateTime(c.last_message_at)}</p>
+        <p class="row-meta">${unreadIds.has(c.id) ? `<span class="row-new">Mensagem nova</span>, ` : ""}${h ? `<strong>${HANDOVER_LABEL[h.status]}</strong>, ` : ""}${formatDateTime(c.last_message_at)}</p>
       </div>
     </a></li>`;
   }).join("");

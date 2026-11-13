@@ -24,8 +24,15 @@ export const CUSTODY_LABEL = { with_finder: "Está com quem encontrou", sighted:
 export const CONTEXT_LABEL = { inquiry: "Pergunta sobre o animal", sighted: "Viu o animal", has_pet: "Está com o animal" };
 export const REVIEW_LABEL = { pending: "Aguardando aprovação", approved: "Aprovado", rejected: "Recusado" };
 export const HANDOVER_LABEL = {
-  under_review: "Em revisão",
-  approved: "Entrega liberada",
-  rejected: "Revisão recusada",
+  under_review: "Entrega em andamento",
+  approved: "Entrega em andamento",
+  rejected: "Entrega cancelada",
   completed: "Entrega concluída",
 };
+
+// Sugestões do campo Bairro; quem anuncia pode escrever outro.
+export const NEIGHBORHOODS = [
+  "Centro", "Chapadinha", "Jardim Florestal", "Jardim Fogaça", "Jardim Itália", "Taboãozinho", "Vila Aliança", "Vila Belo Horizonte",
+  "Vila Cubatão", "Vila Deyse", "Vila Francisca", "Vila Maria", "Vila Nova Itapetininga", "Vila Piedade", "Vila Popular", "Vila Recreio",
+  "Vila Reis", "Vila Rio Branco", "Vila Rosa", "Vila Santana",
+];
