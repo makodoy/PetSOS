@@ -146,10 +146,9 @@ vercel dev                   # http://localhost:3000
 ## Estrutura
 
 ```
-index.html  anunciar.html  anuncio.html  comparar.html  cartaz.html    anúncios
-entrar.html  nova-senha.html  conta.html  meus.html                    conta e acompanhamento
-conversas.html  conversa.html                                          mensagens e entrega
-admin.html  privacidade.html  termos.html                              moderação e textos legais
+index.html                                                             página inicial
+pages/                                                                 demais páginas (anúncio, conta, conversas, moderação,
+                                                                       textos legais), servidas sem a pasta: /anuncio, /conta…
 assets/css/styles.css                                                  tokens e componentes
 assets/js/                                                             um módulo por página + supabase.js, ui.js, map.js, photo.js
 api/config.py  api/matches.py  api/_matching.py                        configuração e correspondência

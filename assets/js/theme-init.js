@@ -2,6 +2,6 @@
 try {
   if (localStorage.getItem("petsos:theme") === "dark") {
     document.documentElement.dataset.theme = "dark";
-    document.querySelector('meta[name="theme-color"]').content = "#161B19";
+    document.querySelector('meta[name="theme-color"]').content = "#2B1650";
   }
 } catch (e) { /* navegação privada: fica o tema claro */ }
